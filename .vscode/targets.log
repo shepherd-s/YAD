@@ -5,9 +5,8 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
- 
 
-# Make data base, printed on Sun Jun 12 21:17:41 2022
+# Make data base, printed on Sun Jun 12 21:22:46 2022
 
 # Variables
 
@@ -52,7 +51,7 @@ VSCODE_VERBOSE_LOGGING = true
 # environment
 VSCODE_CWD = /root
 # environment
-SSH_CONNECTION = 192.168.0.11 36918 192.168.0.19 22
+SSH_CONNECTION = 192.168.0.11 54074 192.168.0.19 22
 # environment
 PATH = /root/.vscode-server/bin/4af164ea3a06f701fe3e89a2bcbb421d2026b68f/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # environment
@@ -64,7 +63,7 @@ LC_MESSAGES = en_US.UTF-8
 # environment
 VSCODE_LOG_STACK = false
 # environment
-VSCODE_IPC_HOOK_CLI = /run/user/0/vscode-ipc-3c3c893a-83b8-4f4f-95d4-1f0baad7e963.sock
+VSCODE_IPC_HOOK_CLI = /run/user/0/vscode-ipc-ef428159-7f2d-4cca-a535-56b525883b54.sock
 # default
 .FEATURES := target-specific order-only second-expansion else-if shortest-stem undefine oneshell archives jobserver output-sync check-symlink load
 # environment
@@ -86,7 +85,7 @@ HOME = /root
 # environment
 LOGNAME = root
 # environment
-APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = true
+APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = 1
 # automatic
 +F = $(notdir $+)
 # environment
@@ -111,8 +110,6 @@ USER = root
 %D = $(patsubst %/,%,$(dir $%))
 # default
 MAKE_COMMAND := make
-# environment
-OLDPWD = /root/.vscode-server/bin/4af164ea3a06f701fe3e89a2bcbb421d2026b68f
 # default
 .VARIABLES := 
 # automatic
@@ -124,7 +121,7 @@ MAKEFLAGS = pqrR
 # environment
 MFLAGS = -pqrR
 # environment
-SSH_CLIENT = 192.168.0.11 36918 22
+SSH_CLIENT = 192.168.0.11 54074 22
 # environment
 MAIL = /var/mail/root
 # automatic
@@ -154,7 +151,7 @@ LANG = C
 # environment
 VSCODE_EXTHOST_WILL_SEND_SOCKET = true
 # variable set hash-table stats:
-# Load=71/1024=7%, Rehash=0, Collisions=9/99=9%
+# Load=70/1024=7%, Rehash=0, Collisions=9/98=9%
 
 # Pattern-specific Variable Values
 
@@ -162,9 +159,9 @@ VSCODE_EXTHOST_WILL_SEND_SOCKET = true
 
 # Directories
 
-# . (device 45825, inode 107634): 8 files, no impossibilities.
+# . (device 45825, inode 107634): 9 files, no impossibilities.
 
-# 8 files, no impossibilities in 1 directories.
+# 9 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -236,7 +233,6 @@ exec:
 # automatic
 # ? := 
 # variable set hash-table stats:
- 
 # Load=8/32=25%, Rehash=0, Collisions=1/11=9%
 #  recipe to execute (from 'Makefile', line 7):
 	./main
@@ -249,12 +245,12 @@ exec:
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 14 / storage = 108 B / avg = 7 B
-# current buf: size = 8174 B / used = 108 B / count = 14 / avg = 7 B
+# strcache buffers: 1 (0) / strings = 15 / storage = 113 B / avg = 7 B
+# current buf: size = 8174 B / used = 113 B / count = 15 / avg = 7 B
 
-# strcache performance: lookups = 27 / hit rate = 48%
+# strcache performance: lookups = 28 / hit rate = 46%
 # hash-table stats:
-# Load=14/8192=0%, Rehash=0, Collisions=1/27=4%
-# Finished Make data base on Sun Jun 12 21:17:41 2022
+# Load=15/8192=0%, Rehash=0, Collisions=1/28=4%
+# Finished Make data base on Sun Jun 12 21:22:46 2022
 
  
