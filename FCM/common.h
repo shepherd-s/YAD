@@ -1,0 +1,1 @@
+#define GY91MAXBYTES 2 /* word length of the gy91 data opperations in bytes */

@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "/usr/src/linux-headers-5.10.60-sunxi/include/",
+                "/usr/src/linux-headers-5.10.60-sunxi/arch/arm/include/",
+                "/usr/src/linux-headers-5.10.60-sunxi/arch/arm/include/generated/"
+            ],
+            "defines": [],
+            "compilerPath": "/bin/gcc-8",
+            "cStandard": "gnu17",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "linux-gcc-arm",
+            "browse": {
+                "limitSymbolsToIncludedHeaders": false
+            },
+            "configurationProvider": "ms-vscode.makefile-tools"
+        }
+    ],
+    "version": 4
+}
