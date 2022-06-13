@@ -6,7 +6,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Sun Jun 12 21:22:46 2022
+# Make data base, printed on Mon Jun 13 10:26:32 2022
 
 # Variables
 
@@ -51,7 +51,7 @@ VSCODE_VERBOSE_LOGGING = true
 # environment
 VSCODE_CWD = /root
 # environment
-SSH_CONNECTION = 192.168.0.11 54074 192.168.0.19 22
+SSH_CONNECTION = 192.168.0.11 50790 192.168.0.19 22
 # environment
 PATH = /root/.vscode-server/bin/4af164ea3a06f701fe3e89a2bcbb421d2026b68f/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # environment
@@ -63,7 +63,7 @@ LC_MESSAGES = en_US.UTF-8
 # environment
 VSCODE_LOG_STACK = false
 # environment
-VSCODE_IPC_HOOK_CLI = /run/user/0/vscode-ipc-ef428159-7f2d-4cca-a535-56b525883b54.sock
+VSCODE_IPC_HOOK_CLI = /run/user/0/vscode-ipc-d2a58288-ad5e-40ce-8aa2-593649e83a94.sock
 # default
 .FEATURES := target-specific order-only second-expansion else-if shortest-stem undefine oneshell archives jobserver output-sync check-symlink load
 # environment
@@ -101,7 +101,7 @@ MAKECMDGOALS := all
 # environment
 SHLVL = 1
 # environment
-XDG_SESSION_ID = 4
+XDG_SESSION_ID = 16
 # environment
 USER = root
 # makefile
@@ -121,7 +121,7 @@ MAKEFLAGS = pqrR
 # environment
 MFLAGS = -pqrR
 # environment
-SSH_CLIENT = 192.168.0.11 54074 22
+SSH_CLIENT = 192.168.0.11 50790 22
 # environment
 MAIL = /var/mail/root
 # automatic
@@ -181,7 +181,7 @@ all: main exec
 # Not a target:
 main.c:
 #  Implicit rule search has been done.
-#  Last modified 2021-10-08 11:26:42.545887229
+#  Last modified 2022-06-12 21:27:08.484796618
 #  File has been updated.
 #  Successfully updated.
 
@@ -194,7 +194,7 @@ main.c:
 # Not a target:
 Makefile:
 #  Implicit rule search has been done.
-#  Last modified 2021-10-06 12:49:48.782641192
+#  Last modified 2022-06-12 21:27:08.484796618
 #  File has been updated.
 #  Successfully updated.
 
@@ -251,6 +251,6 @@ exec:
 # strcache performance: lookups = 28 / hit rate = 46%
 # hash-table stats:
 # Load=15/8192=0%, Rehash=0, Collisions=1/28=4%
-# Finished Make data base on Sun Jun 12 21:22:46 2022
+# Finished Make data base on Mon Jun 13 10:26:32 2022
 
  
