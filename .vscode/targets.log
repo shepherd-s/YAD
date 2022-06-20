@@ -6,7 +6,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Mon Jun 13 10:26:32 2022
+# Make data base, printed on Mon Jun 20 11:12:52 2022
 
 # Variables
 
@@ -39,7 +39,7 @@ SHELL = /bin/sh
 # environment
 VSCODE_NLS_CONFIG = {"locale":"en","availableLanguages":{}}
 # environment
-_ = /root/.vscode-server/bin/4af164ea3a06f701fe3e89a2bcbb421d2026b68f/node
+_ = /root/.vscode-server/bin/30d9c6cd9483b2cc586687151bcbcd635f373630/node
 # makefile (from 'Makefile', line 1)
 MAKEFILE_LIST :=  Makefile
 # 'override' directive
@@ -51,9 +51,9 @@ VSCODE_VERBOSE_LOGGING = true
 # environment
 VSCODE_CWD = /root
 # environment
-SSH_CONNECTION = 192.168.0.11 50790 192.168.0.19 22
+SSH_CONNECTION = 192.168.0.11 56186 192.168.0.19 22
 # environment
-PATH = /root/.vscode-server/bin/4af164ea3a06f701fe3e89a2bcbb421d2026b68f/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+PATH = /root/.vscode-server/bin/30d9c6cd9483b2cc586687151bcbcd635f373630/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # environment
 C_INCLUDE_PATH = /usr/src/linux-headers-5.10.21-sunxi/arch/arm/include:/usr/src/linux-headers-5.10.21-sunxi/arch/alpha/include:/usr/src/linux-headers-5.10.21-sunxi/include:/root/WiringOP/wiringPi/
 # environment
@@ -63,7 +63,7 @@ LC_MESSAGES = en_US.UTF-8
 # environment
 VSCODE_LOG_STACK = false
 # environment
-VSCODE_IPC_HOOK_CLI = /run/user/0/vscode-ipc-d2a58288-ad5e-40ce-8aa2-593649e83a94.sock
+VSCODE_IPC_HOOK_CLI = /run/user/0/vscode-ipc-0e7bac0f-e412-4991-945e-6cdf3f338455.sock
 # default
 .FEATURES := target-specific order-only second-expansion else-if shortest-stem undefine oneshell archives jobserver output-sync check-symlink load
 # environment
@@ -101,7 +101,7 @@ MAKECMDGOALS := all
 # environment
 SHLVL = 1
 # environment
-XDG_SESSION_ID = 16
+XDG_SESSION_ID = 4
 # environment
 USER = root
 # makefile
@@ -121,13 +121,13 @@ MAKEFLAGS = pqrR
 # environment
 MFLAGS = -pqrR
 # environment
-SSH_CLIENT = 192.168.0.11 50790 22
+SSH_CLIENT = 192.168.0.11 56186 22
 # environment
 MAIL = /var/mail/root
 # automatic
 +D = $(patsubst %/,%,$(dir $+))
 # environment
-BROWSER = /root/.vscode-server/bin/4af164ea3a06f701fe3e89a2bcbb421d2026b68f/bin/helpers/browser.sh
+BROWSER = /root/.vscode-server/bin/30d9c6cd9483b2cc586687151bcbcd635f373630/bin/helpers/browser.sh
 # environment
 VSCODE_HANDLES_SIGPIPE = true
 # default
@@ -151,7 +151,7 @@ LANG = C
 # environment
 VSCODE_EXTHOST_WILL_SEND_SOCKET = true
 # variable set hash-table stats:
-# Load=70/1024=7%, Rehash=0, Collisions=9/98=9%
+# Load=70/1024=7%, Rehash=0, Collisions=9/99=9%
 
 # Pattern-specific Variable Values
 
@@ -159,9 +159,9 @@ VSCODE_EXTHOST_WILL_SEND_SOCKET = true
 
 # Directories
 
-# . (device 45825, inode 107634): 9 files, no impossibilities.
+# . (device 45825, inode 107634): 10 files, no impossibilities.
 
-# 9 files, no impossibilities in 1 directories.
+# 10 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -169,21 +169,20 @@ VSCODE_EXTHOST_WILL_SEND_SOCKET = true
 
 # Files
 
-all: main exec
+all: fcm main exec
 #  Command line target.
 #  Implicit rule search has been done.
 #  File does not exist.
 #  File has been updated.
 #  Needs to be updated (-q is set).
 # variable set hash-table stats:
-# Load=0/32=0%, Rehash=0, Collisions=0/3=0%
+# Load=0/32=0%, Rehash=0, Collisions=0/4=0%
 
 # Not a target:
 main.c:
-#  Implicit rule search has been done.
-#  Last modified 2022-06-12 21:27:08.484796618
-#  File has been updated.
-#  Successfully updated.
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
 
 # Not a target:
 .SUFFIXES:
@@ -194,9 +193,16 @@ main.c:
 # Not a target:
 Makefile:
 #  Implicit rule search has been done.
-#  Last modified 2022-06-12 21:27:08.484796618
+#  Last modified 2022-06-20 11:12:19.56803723
 #  File has been updated.
 #  Successfully updated.
+
+remove:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 21):
+	rmmod gy91.ko
 
 # Not a target:
 .DEFAULT:
@@ -204,20 +210,33 @@ Makefile:
 #  Modification time never checked.
 #  File has not been updated.
 
+clean: remove fcm_clean_mod
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 18):
+	rm -f main
+
 main: main.c
-#  Implicit rule search has been done.
-#  Last modified 2021-10-08 11:26:44.705806589
-#  File has been updated.
-#  Successfully updated.
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
 
 exec:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 15):
+	./main
+
+fcm:
 #  Implicit rule search has not been done.
 #  Implicit/static pattern stem: ''
 #  File does not exist.
 #  File has been updated.
 #  Needs to be updated (-q is set).
 # automatic
-# @ := exec
+# @ := fcm
 # automatic
 # % := 
 # automatic
@@ -233,24 +252,32 @@ exec:
 # automatic
 # ? := 
 # variable set hash-table stats:
-# Load=8/32=25%, Rehash=0, Collisions=1/11=9%
-#  recipe to execute (from 'Makefile', line 7):
-	./main
+# Load=8/32=25%, Rehash=0, Collisions=1/12=8%
+#  recipe to execute (from 'Makefile', line 10):
+	make -C $(PWD)/FCM/
+
+fcm_clean_mod:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 24):
+	make clean_mod -C $(PWD)/FCM/
+	
 
 # files hash-table stats:
-# Load=7/1024=1%, Rehash=0, Collisions=0/24=0%
+# Load=11/1024=1%, Rehash=0, Collisions=0/34=0%
 # VPATH Search Paths
 
 # No 'vpath' search paths.
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 15 / storage = 113 B / avg = 7 B
-# current buf: size = 8174 B / used = 113 B / count = 15 / avg = 7 B
+# strcache buffers: 1 (0) / strings = 20 / storage = 155 B / avg = 7 B
+# current buf: size = 8174 B / used = 155 B / count = 20 / avg = 7 B
 
-# strcache performance: lookups = 28 / hit rate = 46%
+# strcache performance: lookups = 40 / hit rate = 50%
 # hash-table stats:
-# Load=15/8192=0%, Rehash=0, Collisions=1/28=4%
-# Finished Make data base on Mon Jun 13 10:26:32 2022
+# Load=20/8192=0%, Rehash=0, Collisions=1/40=2%
+# Finished Make data base on Mon Jun 20 11:12:52 2022
 
  

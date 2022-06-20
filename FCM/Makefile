@@ -17,3 +17,6 @@ insert:
 
 clean:
 	rm -f $(clean_files)
+
+clean_mod:
+	rm -f gy91.ko

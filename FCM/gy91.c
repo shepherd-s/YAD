@@ -61,7 +61,7 @@ static int open_gy91(struct inode *inode, struct file *filp)
 
 static ssize_t read_gy91(struct file *filp, char __user *ubuf, size_t count, loff_t *off)
 {
-	pr_info("to read %zd bytes\n", count);EINVAL
+	pr_info("to read %zd bytes\n", count);
 	return count;
 }
 
