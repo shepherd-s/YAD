@@ -19,7 +19,7 @@ int main (int argc, char *argv[]) {
     (
         "main_asm:\n\t"
             "ldr r0, =0x01c20000\n\t"           //base dir of ccu
-            "ldr r1, =0x00a0\n\t"  //offset
+            "ldr r1, =0x00a0\n\t"               //offset
             "ldr r2, =0x1\n\t"                         
             "str r2, [r0, r1]\n\t"
     );

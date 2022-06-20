@@ -4,6 +4,10 @@
 #entra en FCM y ejecuta su make para crear e insertar el módulo gy91.ko
 #después ejecuta make en el directorio principal
 
+#*******USAGE********
+# make clean to eliminate binaries and unmount module gy91.ko
+# make to build, if fails, do make clean
+
 all: fcm main exec
 
 fcm: 
