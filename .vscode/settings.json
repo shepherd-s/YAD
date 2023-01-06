@@ -2,7 +2,16 @@
     "files.associations": {
         "regmap.h": "c",
         "driver.h": "c",
-        "sched.h": "c"
+        "sched.h": "c",
+        "stdint.h": "c",
+        "param.h": "c",
+        "common.h": "c",
+        "command.h": "c",
+        "stdlib.h": "c",
+        "fcm_ops.h": "c",
+        "cstdlib": "c"
     },
-    "C_Cpp.errorSquiggles": "Disabled"
+    "C_Cpp.errorSquiggles": "enabled",
+    "C_Cpp.intelliSenseEngineFallback": "enabled",
+    "C_Cpp.dimInactiveRegions": false
 }

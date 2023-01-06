@@ -1,6 +1,0 @@
-make --dry-run --keep-going --print-directory
-make: Entering directory '/root/YAD_0.1'
-make -C /root/YAD_0.1/FCM/
-./main
-make: Leaving directory '/root/YAD_0.1'
- 

@@ -1,29 +1,23 @@
 #Se silencian los comandos con @
 #%.o cualquier archivo que termine en .o ej regla carpeta1/%.o:carpeta1/%.c el objetivo se llamara igual
 #$? pasa todos los requisitos, $< pasa los .c $@ pasa los .o
-#entra en FCM y ejecuta su make para crear e insertar el módulo gy91.ko
+#\ para dividir lineas en variables por ejemplo
+#entra en fcm y ejecuta su make para crear e insertar el módulo flight_control.ko
 #después ejecuta make en el directorio principal
 
 #*******USAGE********
-# make clean to eliminate binaries and unmount module gy91.ko
+# make clean to eliminate binaries and unmount module flight_control.ko
 # make to build, if fails, do make clean
+EXTRA_CFLAGS += -std=gnu11
+PWD := $(shell pwd)
 
-all: fcm main exec
-
-fcm: 
-	make -C $(PWD)/FCM/
-
-main: main.c
-
-exec:
+all: main
+	make clean -C $(PWD)/fcm
+	make -C $(PWD)/fcm
 	./main
 
-clean: remove fcm_clean_mod
+main: main.c command.h command.c
+
+clean:
 	rm -f main
-
-remove:
-	rmmod gy91.ko
-
-fcm_clean_mod:
-	make clean_mod -C $(PWD)/FCM/
-	
+	make clean -C $(PWD)/fcm
