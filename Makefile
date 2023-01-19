@@ -8,7 +8,7 @@
 #*******USAGE********
 # make clean to eliminate binaries and unmount module flight_control.ko
 # make to build, if fails, do make clean
-EXTRA_CFLAGS += -std=gnu11
+
 PWD := $(shell pwd)
 
 all: main
@@ -18,6 +18,7 @@ all: main
 
 main: main.c command.h command.c
 
+.PHONY: clean
 clean:
 	rm -f main
 	make clean -C $(PWD)/fcm

@@ -20,12 +20,12 @@
 
 static char *commands;
 static char *gy91_data;
-static struct spi_master *fcm_spi_master;
-static struct spi_device *fcm_spi_slave;
+static struct spi_master *fcm_master;
+static struct spi_device *fcm_slave;
 
 //spi slave info
-struct spi_board_info fcm_spi_slave_info = {
-    .modalias = "fcm_spi_slave",
+struct spi_board_info fcm_slave_info = {
+    .modalias = "fcm_slave",
     .max_speed_hz = 1000000,
     .bus_num = BUS_NUM,
     .chip_select = 0,
@@ -59,8 +59,8 @@ static ssize_t fcm_write(struct file *file, const char __user *user_buffer, size
         return -EINVAL;
     }
 
-    if (copy_from_user(commands, user_buffer, ret)) {
-        printk("fcm: Error during copy_from_user\n");
+    if (raw_copy_from_user(commands, user_buffer, ret)) {
+        printk("fcm: Error during raw_copy_from_user\n");
         return -EFAULT;
     }
     
@@ -69,7 +69,7 @@ static ssize_t fcm_write(struct file *file, const char __user *user_buffer, size
         case MPU_CONFIG_FLAG:
             buf[0] = commands[1];
             buf[1] = commands[2];
-            if (spi_write(fcm_spi_slave, buf, 2) < 0) {
+            if (spi_write(fcm_slave, buf, 2) < 0) {
                 printk("fcm: Error writing to MPU\n");
             }
 
@@ -112,19 +112,19 @@ static ssize_t fcm_read(struct file *file, char __user *user_buffer, size_t user
 {
     size_t ret = user_len;
 
-    gy91_data[0] = spi_w8r8(fcm_spi_slave, ACCEL_XOUT_H | MPU_READ);
-    gy91_data[1] = spi_w8r8(fcm_spi_slave, ACCEL_XOUT_L | MPU_READ);
-    gy91_data[2] = spi_w8r8(fcm_spi_slave, ACCEL_YOUT_H | MPU_READ);
-    gy91_data[3] = spi_w8r8(fcm_spi_slave, ACCEL_YOUT_L | MPU_READ);
-    gy91_data[4] = spi_w8r8(fcm_spi_slave, ACCEL_ZOUT_H | MPU_READ);
-    gy91_data[5] = spi_w8r8(fcm_spi_slave, ACCEL_ZOUT_L | MPU_READ);
+    gy91_data[0] = spi_w8r8(fcm_slave, ACCEL_XOUT_H | MPU_READ);
+    gy91_data[1] = spi_w8r8(fcm_slave, ACCEL_XOUT_L | MPU_READ);
+    gy91_data[2] = spi_w8r8(fcm_slave, ACCEL_YOUT_H | MPU_READ);
+    gy91_data[3] = spi_w8r8(fcm_slave, ACCEL_YOUT_L | MPU_READ);
+    gy91_data[4] = spi_w8r8(fcm_slave, ACCEL_ZOUT_H | MPU_READ);
+    gy91_data[5] = spi_w8r8(fcm_slave, ACCEL_ZOUT_L | MPU_READ);
 
-    gy91_data[6] = spi_w8r8(fcm_spi_slave, GYRO_XOUT_H | MPU_READ);
-    gy91_data[7] = spi_w8r8(fcm_spi_slave, GYRO_XOUT_L | MPU_READ);
-    gy91_data[8] = spi_w8r8(fcm_spi_slave, GYRO_YOUT_H | MPU_READ);
-    gy91_data[9] = spi_w8r8(fcm_spi_slave, GYRO_YOUT_L | MPU_READ);
-    gy91_data[10] = spi_w8r8(fcm_spi_slave, GYRO_ZOUT_H | MPU_READ);
-    gy91_data[11] = spi_w8r8(fcm_spi_slave, GYRO_ZOUT_L | MPU_READ);
+    gy91_data[6] = spi_w8r8(fcm_slave, GYRO_XOUT_H | MPU_READ);
+    gy91_data[7] = spi_w8r8(fcm_slave, GYRO_XOUT_L | MPU_READ);
+    gy91_data[8] = spi_w8r8(fcm_slave, GYRO_YOUT_H | MPU_READ);
+    gy91_data[9] = spi_w8r8(fcm_slave, GYRO_YOUT_L | MPU_READ);
+    gy91_data[10] = spi_w8r8(fcm_slave, GYRO_ZOUT_H | MPU_READ);
+    gy91_data[11] = spi_w8r8(fcm_slave, GYRO_ZOUT_L | MPU_READ);
     
     printk("fcm: accel z -> %x%x", gy91_data[4], gy91_data[5]);
     if (unlikely(user_len < UBUFFER_SIZE)) {
@@ -132,8 +132,8 @@ static ssize_t fcm_read(struct file *file, char __user *user_buffer, size_t user
         return -EINVAL;
     }
 
-    if (copy_to_user(user_buffer, gy91_data, UBUFFER_SIZE)) {
-        printk("fcm: Error during copy_to_user\n");
+    if (raw_copy_to_user(user_buffer, gy91_data, UBUFFER_SIZE)) {
+        printk("fcm: Error during raw_copy_to_user\n");
         return -EFAULT;
     }
 
@@ -174,27 +174,27 @@ static int __init fcm_init(void)
     }
 
     //get bus for spi master
-    fcm_spi_master = spi_busnum_to_master(fcm_spi_slave_info.bus_num);
-    if (unlikely(!fcm_spi_master)) {
+    fcm_master = spi_busnum_to_master(fcm_slave_info.bus_num);
+    if (unlikely(!fcm_master)) {
         printk("fcm: MASTER not found\n");
         return -ENODEV;
     }
 
     //create new spi slave 
-    fcm_spi_slave = spi_new_device(fcm_spi_master, &fcm_spi_slave_info);
-    if (unlikely(!fcm_spi_slave)) {
+    fcm_slave = spi_new_device(fcm_master, &fcm_slave_info);
+    if (unlikely(!fcm_slave)) {
         printk("fcm: FAILED to create slave\n");
         return -ENODEV;
     }
     
     //set mandatory word length
-    fcm_spi_slave->bits_per_word = 8;
+    fcm_slave->bits_per_word = 8;
     
     //setup spi slave
-    status = spi_setup(fcm_spi_slave);
+    status = spi_setup(fcm_slave);
     if (unlikely(status)) {
         printk("fcm: FAILED to setup slave.\n");
-        spi_unregister_device(fcm_spi_slave);
+        spi_unregister_device(fcm_slave);
         return -ENODEV;
     }
 
@@ -224,8 +224,8 @@ static void __exit fcm_exit(void)
     printk("fcm: Deregistering misc device\n");
 
     //deregister spi device
-    if (likely(fcm_spi_slave)) {
-        spi_unregister_device(fcm_spi_slave);
+    if (likely(fcm_slave)) {
+        spi_unregister_device(fcm_slave);
     }
 
     //deregister the misc device module
