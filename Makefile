@@ -12,7 +12,6 @@
 PWD := $(shell pwd)
 
 all: main
-	make clean -C $(PWD)/fcm
 	make -C $(PWD)/fcm
 	./main
 

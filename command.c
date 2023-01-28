@@ -58,6 +58,36 @@ int gpio_write(int fd, char pin, char direction, char value)
     return ret;
 }
 
+int motor_initialization(int fd, char seconds,
+                                 char max_cycle_ms,
+                                 char max_duty_ms,
+                                 char min_duty_ms,
+                                 char gpio_pin)
+{
+    char com_flag = MOTOR_CONFIG_FLAG;
+    char *buf = malloc(UBUFFER_SIZE);
+    int ret = 0;
+
+    if (!buf) {
+        printf("Error allocating memmory for motor_initialization\n");
+        ret = -1;
+    }
+
+    buf[0] = com_flag;
+    buf[1] = seconds;
+    buf[2] = max_cycle_ms;
+    buf[3] = max_duty_ms;
+    buf[4] = min_duty_ms;
+    buf[5] = gpio_pin;
+    if (write(fd, buf, UBUFFER_SIZE) < 0) {
+        printf("Error writing to fcm file\n");
+        ret = -2;
+    }
+
+    free(buf);
+    return ret;
+}
+
 int motor_control(int fd, char direction, int percent)
 {
     char com_flag = MOTOR_CONFIG_FLAG;

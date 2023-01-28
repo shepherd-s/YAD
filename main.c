@@ -40,11 +40,12 @@ int main (int argc, char *argv[]) {
     mpu_write(fcm_fd, CONFIG, 0x00);
     mpu_write(fcm_fd, ACCEL_CONFIG, ACCEL_CONFIG_SET);//full scale
     mpu_write(fcm_fd, GYRO_CONFIG, GYRO_CONFIG_SET);//full scale
-    /*
-    */
 
+    if (motor_initialization(fcm_fd, 3, 20, 2, 1, FL_MOTOR_GPIO)) {
+        printf("Error initializing motor\n");
+    }
 
-    for (int j = 0; j < 1000000; j++) {
+    /*for (int j = 0; j < 1000000; j++) {
 
     
     if (!read(fcm_fd, fcm_buffer, UBUFFER_SIZE)) {
@@ -56,7 +57,7 @@ int main (int argc, char *argv[]) {
     }
     sleep(1);
     }
-    /*float t = 18000;
+    float t = 18000;
     float dt = 1000;
     float speed = 1;
     int count = 250;

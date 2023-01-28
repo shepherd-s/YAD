@@ -1,5 +1,5 @@
 #define BUS_NUM 0
-#define UBUFFER_SIZE 32
+#define UBUFFER_SIZE 256
 #define ACCEL16_NORM 2048
 
 ///////////////////////////////////////////////////////////////////////////////command flags
@@ -7,6 +7,7 @@
 #define ESC_CONTROL_FLAG 0x01
 #define GPIO_CONFIG_FLAG 0x02
 #define MOTOR_CONFIG_FLAG 0x03
+#define MOTOR_RUN_FLAG 0x04
 
 ///////////////////////////////////////////////////////////////////////////////word values for MPU9250
 #define UC_DATA_RESET 0x41
@@ -52,7 +53,10 @@
 //////////////////////////////////////////////////////////////////////////////gpio configs
 #define IN 0x00
 #define OUT 0X01
-#define GPIO_6 0x06 //motor front left
+#define FL_MOTOR_GPIO (uint8_t) 6 //motor front left
+#define FR_MOTOR_GPIO (uint8_t) 110 //motor front right
+#define RL_MOTOR_GPIO (uint8_t) 20 //motor rear left
+#define RR_MOTOR_GPIO (uint8_t) 200 //motor rear right
 #define HIGH 0x01
 #define LOW 0x00
 

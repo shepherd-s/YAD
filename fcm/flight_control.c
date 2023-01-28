@@ -1,35 +1,37 @@
 /**
-*@brief kernel module for flight control using
-* mpu9250 through spi interface as a misc device
-*
-*@author Frankie
-*
-* 
+* Copyright (C) 2023 Shepherd.
 */
 
 #include <linux/module.h>
 #include <linux/init.h>
-#include <linux/fs.h>
-#include <asm/uaccess.h>
 #include <linux/miscdevice.h>
+#include <linux/fs.h>
+#include <linux/uaccess.h>
 #include <linux/spi/spi.h>
 #include <linux/gpio.h>
+
+#include <evl/thread.h>
 
 #include "../common/common.h"
 #include "fcm_ops.h"
 
 static char *commands;
-static char *gy91_data;
-static struct spi_master *fcm_spi_master;
-static struct spi_device *fcm_spi_slave;
+static char *data;
+static struct spi_controller *mpu9250_spi_controller;
+static struct spi_device *mpu9250_spi_device;
+
+static struct evl_kthread *fl_motor_kthread;
+static struct evl_kthread *fr_motor_kthread;
+static struct evl_kthread *rl_motor_kthread;
+static struct evl_kthread *rr_motor_kthread;
 
 //spi slave info
-struct spi_board_info fcm_spi_slave_info = {
-    .modalias = "fcm_spi_slave",
-    .max_speed_hz = 1000000,
+struct spi_board_info mpu9250_spi_device_info = {
+    .modalias = "mpu9250_spi",
+    .max_speed_hz = 20000000,
     .bus_num = BUS_NUM,
     .chip_select = 0,
-    .mode = 3,
+    .mode = SPI_MODE_3,
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////FOPS
@@ -47,12 +49,6 @@ static int fcm_close(struct inode *inode, struct file *file)
 static ssize_t fcm_write(struct file *file, const char __user *user_buffer, size_t user_len, loff_t *ppos)
 {
     size_t ret = user_len;
-    char *buf = kmalloc(2, GFP_KERNEL);
-
-    if (unlikely(!buf)) {
-        printk("fcm: Error allocating memory for buf variable\n");
-        return -ENOMEM;
-    }
 
     if (unlikely(ret > UBUFFER_SIZE)) {
         printk("fcm: Error max buffer exceeded\n");
@@ -63,46 +59,26 @@ static ssize_t fcm_write(struct file *file, const char __user *user_buffer, size
         printk("fcm: Error during copy_from_user\n");
         return -EFAULT;
     }
-    
-    //check what the com_flag is to perform corresponding write operation
+
     switch (commands[0]) {
-        case MPU_CONFIG_FLAG:
-            buf[0] = commands[1];
-            buf[1] = commands[2];
-            if (spi_write(fcm_spi_slave, buf, 2) < 0) {
-                printk("fcm: Error writing to MPU\n");
-            }
-
-            kfree(buf);
-        break;
-
-        case GPIO_CONFIG_FLAG: //pin, direction, value
-
-            if (gpio_request((int)commands[1], "gpio-req")) {
-                printk("fcm: Error requesting gpio\n");
-            }
-
-            if (commands[2] == OUT) {
-                if (gpio_direction_output((int)commands[1], 0)) {
-                    printk("fcm: Error setting direction gpio\n");
-                }
-            }
-
-            if (commands[2] == IN) {
-                    if (gpio_direction_input((int)commands[1])) {
-                    printk("fcm: Error setting direction gpio\n");
-                }
-            }
-
-            //set gpio value
-            gpio_set_value((int)commands[1], (int)commands[3]);
-
-            gpio_free((int)commands[1]);//see final value on module exit
-        break;
-
         case MOTOR_CONFIG_FLAG:
-            
-        default:break;
+            if (evl_run_kthread_on_cpu(fl_motor_kthread,
+                                        0,
+                                        init_motor_fnptr,
+                                        commands,
+                                        99,
+                                        EVL_CLONE_PRIVATE,
+                                        "%s")) {
+                printk("fcm: Error running fl_motor_thread\n");
+            }
+        break;
+
+        case MOTOR_RUN_FLAG:
+        
+        break;
+
+        default:
+        break;
     }
 
     return ret;
@@ -111,28 +87,13 @@ static ssize_t fcm_write(struct file *file, const char __user *user_buffer, size
 static ssize_t fcm_read(struct file *file, char __user *user_buffer, size_t user_len, loff_t *ppos)
 {
     size_t ret = user_len;
-
-    gy91_data[0] = spi_w8r8(fcm_spi_slave, ACCEL_XOUT_H | MPU_READ);
-    gy91_data[1] = spi_w8r8(fcm_spi_slave, ACCEL_XOUT_L | MPU_READ);
-    gy91_data[2] = spi_w8r8(fcm_spi_slave, ACCEL_YOUT_H | MPU_READ);
-    gy91_data[3] = spi_w8r8(fcm_spi_slave, ACCEL_YOUT_L | MPU_READ);
-    gy91_data[4] = spi_w8r8(fcm_spi_slave, ACCEL_ZOUT_H | MPU_READ);
-    gy91_data[5] = spi_w8r8(fcm_spi_slave, ACCEL_ZOUT_L | MPU_READ);
-
-    gy91_data[6] = spi_w8r8(fcm_spi_slave, GYRO_XOUT_H | MPU_READ);
-    gy91_data[7] = spi_w8r8(fcm_spi_slave, GYRO_XOUT_L | MPU_READ);
-    gy91_data[8] = spi_w8r8(fcm_spi_slave, GYRO_YOUT_H | MPU_READ);
-    gy91_data[9] = spi_w8r8(fcm_spi_slave, GYRO_YOUT_L | MPU_READ);
-    gy91_data[10] = spi_w8r8(fcm_spi_slave, GYRO_ZOUT_H | MPU_READ);
-    gy91_data[11] = spi_w8r8(fcm_spi_slave, GYRO_ZOUT_L | MPU_READ);
     
-    printk("fcm: accel z -> %x%x", gy91_data[4], gy91_data[5]);
     if (unlikely(user_len < UBUFFER_SIZE)) {
         printk("fcm: Error not enough user buffer size\n");
         return -EINVAL;
     }
 
-    if (copy_to_user(user_buffer, gy91_data, UBUFFER_SIZE)) {
+    if (copy_to_user(user_buffer, data, UBUFFER_SIZE)) {
         printk("fcm: Error during copy_to_user\n");
         return -EFAULT;
     }
@@ -164,38 +125,16 @@ static int __init fcm_init(void)
 {
     int status;
 
-    printk("fcm: Registering misc device\n");
-
+    status = enable_oob_stage("DOVETAIL");
+    if (status) {
+        printk("fcm: Error enabling out of band stage\n");
+        return status;
+    }
     commands = kzalloc(UBUFFER_SIZE, GFP_KERNEL);
-    gy91_data = kzalloc(UBUFFER_SIZE, GFP_KERNEL);
-    if (unlikely(!gy91_data || !commands)) {
+    data = kzalloc(UBUFFER_SIZE, GFP_KERNEL);
+    if (unlikely(!data || !commands)) {
         printk("fcm: Error allocating memory for rw data\n");
 	    return -ENOMEM;
-    }
-
-    //get bus for spi master
-    fcm_spi_master = spi_busnum_to_master(fcm_spi_slave_info.bus_num);
-    if (unlikely(!fcm_spi_master)) {
-        printk("fcm: MASTER not found\n");
-        return -ENODEV;
-    }
-
-    //create new spi slave 
-    fcm_spi_slave = spi_new_device(fcm_spi_master, &fcm_spi_slave_info);
-    if (unlikely(!fcm_spi_slave)) {
-        printk("fcm: FAILED to create slave\n");
-        return -ENODEV;
-    }
-    
-    //set mandatory word length
-    fcm_spi_slave->bits_per_word = 8;
-    
-    //setup spi slave
-    status = spi_setup(fcm_spi_slave);
-    if (unlikely(status)) {
-        printk("fcm: FAILED to setup slave.\n");
-        spi_unregister_device(fcm_spi_slave);
-        return -ENODEV;
     }
 
     //register as misc device
@@ -207,11 +146,12 @@ static int __init fcm_init(void)
 
     //set gpio 7 pin for MPU chip select and 21 for BMP, they are kept
     //until this modules is removed to prevent it's modification
-    gpio_request(19, "gpio-7");
-    gpio_request(21, "gpio-21");
-    gpio_direction_output(19, 1);
-    gpio_direction_output(7, 1);
+    gpio_request(7, "mpu9250_cs_gpio");
+    gpio_request(21, "bmp280_cs_gpio");
+    gpio_direction_output(7, 0);
+    gpio_direction_output(21, 0);
 
+    printk("fcm: Device registered\n");
     return 0;
 }
 //*************************************************************************************************END-INIT
@@ -221,28 +161,28 @@ static int __init fcm_init(void)
  */
 static void __exit fcm_exit(void)
 {
-    printk("fcm: Deregistering misc device\n");
+    printk("fcm: Device deregistered\n");
 
     //deregister spi device
-    if (likely(fcm_spi_slave)) {
-        spi_unregister_device(fcm_spi_slave);
+    if (likely(mpu9250_spi_device)) {
+        spi_unregister_device(mpu9250_spi_device);
     }
 
     //deregister the misc device module
     misc_deregister(&fcm_device);
 
     //free the chip select gpios
-    gpio_free(19);
     gpio_free(7);
+    gpio_free(21);
 
     kfree(commands);
-    kfree(gy91_data);
+    kfree(data);
 }
 
 /* Meta Information */
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Frankie");
-MODULE_DESCRIPTION("flight control module of YAD");
+MODULE_AUTHOR("Shepherd <shepherdsoft@outlook.com>");
+MODULE_DESCRIPTION("Flight control module");
 
 module_init(fcm_init);
 module_exit(fcm_exit);
