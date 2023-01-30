@@ -8,7 +8,7 @@
 #*******USAGE********
 # make clean to eliminate binaries and unmount module flight_control.ko
 # make to build, if fails, do make clean
-
+CFLAGS += -Wa,-mthumb -levl
 PWD := $(shell pwd)
 
 all: main

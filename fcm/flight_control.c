@@ -9,7 +9,12 @@
 #include <linux/uaccess.h>
 #include <linux/spi/spi.h>
 #include <linux/gpio.h>
+#include <linux/slab.h>
 
+#include <linux/dovetail.h>
+#include <evl/file.h>
+#include <evl/flag.h>
+#include <evl/sched.h>
 #include <evl/thread.h>
 
 #include "../common/common.h"
@@ -34,21 +39,64 @@ struct spi_board_info mpu9250_spi_device_info = {
     .mode = SPI_MODE_3,
 };
 
+struct fcm_private_state {
+       /* ... */
+       struct evl_flag eflag;
+       struct evl_file efile;
+};
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////FOPS
 //standard open and close, needs to be implemented, don't need a body
-static int fcm_open(struct inode *inode, struct file *file)
+static int fcm_open(struct inode *inode, struct file *filp)
 {
+    struct fcm_private_state *p;
+	int ret;
+
+	p = kzalloc(sizeof(*p), GFP_KERNEL);
+	if (p == NULL)
+		return -ENOMEM;
+	
+	ret = evl_open_file(&p->efile, filp);
+	if (ret) {
+	   	 kfree(p);
+		 return ret;		 
+	}
+
+	filp->private_data = p;
     return 0;
 }
 
-static int fcm_close(struct inode *inode, struct file *file)
+static int fcm_close(struct inode *inode, struct file *filp)
 {
+    struct fcm_private_state *p = filp->private_data;
+
+	/*
+	 * Flush and destroy the flag some out-of-band operation(s)
+	 * might still be pending on. Some EVL thread(s) might be
+	 * unblocked from oob_read() as a result of this call.
+	 */
+	evl_destroy_flag(&p->eflag);
+
+	/*
+	 * Synchronize with these operations. Unblocked threads will drop
+	 * any pending reference on the file being released, eventually
+	 * allowing this call to return.
+	 */
+	evl_release_file(&p->efile);
+
+	/*
+	 * Neither in-band nor out-of-band users of this file anymore
+	 * for sure, we can free the per-file private context.
+	 */
+	kfree(p);
+
     return 0;
 }
 
-static ssize_t fcm_write(struct file *file, const char __user *user_buffer, size_t user_len, loff_t *ppos)
+static ssize_t fcm_write(struct file *filp, const char __user *user_buffer, size_t user_len, loff_t *ppos)
 {
     size_t ret = user_len;
+    
 
     if (unlikely(ret > UBUFFER_SIZE)) {
         printk("fcm: Error max buffer exceeded\n");
@@ -62,13 +110,13 @@ static ssize_t fcm_write(struct file *file, const char __user *user_buffer, size
 
     switch (commands[0]) {
         case MOTOR_CONFIG_FLAG:
-            if (evl_run_kthread_on_cpu(fl_motor_kthread,
+            if (run_oob_call(init_motor_fnptr, commands)/*evl_run_kthread_on_cpu(fl_motor_kthread,
                                         0,
                                         init_motor_fnptr,
                                         commands,
                                         99,
                                         EVL_CLONE_PRIVATE,
-                                        "%s")) {
+                                        "evl_motor_init_thread")*/) {
                 printk("fcm: Error running fl_motor_thread\n");
             }
         break;
@@ -84,7 +132,46 @@ static ssize_t fcm_write(struct file *file, const char __user *user_buffer, size
     return ret;
 }
 
-static ssize_t fcm_read(struct file *file, char __user *user_buffer, size_t user_len, loff_t *ppos)
+static ssize_t oob_fcm_write(struct file *filp, const char __user *user_buffer, size_t user_len)
+{
+    size_t ret = user_len;
+    
+
+    if (unlikely(ret > UBUFFER_SIZE)) {
+        printk("fcm: Error max buffer exceeded\n");
+        return -EINVAL;
+    }
+
+    if (copy_from_user(commands, user_buffer, ret)) {
+        printk("fcm: Error during copy_from_user\n");
+        return -EFAULT;
+    }
+
+    switch (commands[0]) {
+        case MOTOR_CONFIG_FLAG:
+            if (run_oob_call(init_motor_fnptr, commands)/*evl_run_kthread_on_cpu(fl_motor_kthread,
+                                        0,
+                                        init_motor_fnptr,
+                                        commands,
+                                        99,
+                                        EVL_CLONE_PRIVATE,
+                                        "evl_motor_init_thread")*/) {
+                printk("fcm: Error running fl_motor_thread\n");
+            }
+        break;
+
+        case MOTOR_RUN_FLAG:
+        
+        break;
+
+        default:
+        break;
+    }
+
+    return ret;
+}
+
+static ssize_t fcm_read(struct file *filp, char __user *user_buffer, size_t user_len, loff_t *ppos)
 {
     size_t ret = user_len;
     
@@ -106,6 +193,7 @@ static const struct file_operations fops = {
     .owner = THIS_MODULE,
     .read = fcm_read,
     .write = fcm_write,
+    .oob_write = oob_fcm_write,
     .open = fcm_open,
     .release = fcm_close,
 };
@@ -119,17 +207,12 @@ static struct miscdevice fcm_device = {
 
 //*************************************************************************************************INIT
 /**
- * @brief This function is called, when the module is loaded into the kernel
+ * @brief This function is called when the module is loaded into the kernel
  */
 static int __init fcm_init(void)
 {
     int status;
 
-    status = enable_oob_stage("DOVETAIL");
-    if (status) {
-        printk("fcm: Error enabling out of band stage\n");
-        return status;
-    }
     commands = kzalloc(UBUFFER_SIZE, GFP_KERNEL);
     data = kzalloc(UBUFFER_SIZE, GFP_KERNEL);
     if (unlikely(!data || !commands)) {

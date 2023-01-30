@@ -1,6 +1,6 @@
 #pragma once
 
-void (*init_motor_fnptr) (void *args);
+int init_motor_fnptr(void *args);
 
 void set_velocity(unsigned long vel);
 void init_motor(uint8_t sec_seconds, unsigned long max_cycle_time,

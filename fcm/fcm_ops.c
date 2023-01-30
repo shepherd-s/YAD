@@ -15,13 +15,15 @@ static unsigned long velocity;
 
 static int run = 0;
 
-void (*init_motor_fnptr) (void *args)
+int init_motor_fnptr(void *args)
 {
-    init_motor((uint8_t) args[1], 
-                (unsigned long) args[2] * 1000000,
-                (unsigned long) args[3] * 1000000,
-                (unsigned long) args[4] * 1000000, 
-                (uint8_t) args[5]);
+    char *chargs = (char*) args;
+    init_motor((uint8_t) chargs[1], 
+                (unsigned long) chargs[2] * 1000000,
+                (unsigned long) chargs[3] * 1000000,
+                (unsigned long) chargs[4] * 1000000, 
+                (uint8_t) chargs[5]);
+    return 0;
 }
 
 void set_velocity(unsigned long vel)
@@ -130,7 +132,7 @@ void init_motor(uint8_t sec_seconds, unsigned long max_cycle_time, unsigned long
     sec_count = 0;
     printk("vel 0 s_wait ---> %lu\n", s_wait);
     printk("vel 0 l_wait ---> %lu\n", l_wait);
-    while (sec_count <= sec_seconds*5) {
+    while (sec_count <= sec_seconds) {
         gpio_set_value(gpio, 1);
         ndelay(s_wait);
         gpio_set_value(gpio, 0);

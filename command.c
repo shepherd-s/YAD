@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <evl/evl.h>
+
 #include "command.h"
 #include "common/common.h"
 
@@ -79,7 +81,7 @@ int motor_initialization(int fd, char seconds,
     buf[3] = max_duty_ms;
     buf[4] = min_duty_ms;
     buf[5] = gpio_pin;
-    if (write(fd, buf, UBUFFER_SIZE) < 0) {
+    if (oob_write(fd, buf, UBUFFER_SIZE) < 0) {
         printf("Error writing to fcm file\n");
         ret = -2;
     }

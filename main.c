@@ -6,6 +6,13 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <sched.h>
+#include <pthread.h>
+
+#include <evl/sched.h>
+#include <evl/thread.h>
+#include <evl/evl.h>
+#include <evl/sys.h>
 
 #include "command.h"
 #include "common/common.h"
@@ -13,9 +20,22 @@
 int main (int argc, char *argv[]) {
     int read_n;
     int fcm_fd;
+    int tfd;
+    int status;
     const char *fcm_path = "/dev/fcm";
     char *fcm_buffer = malloc(UBUFFER_SIZE);
     int select = 1;
+
+    struct sched_param param;
+
+	param.sched_priority = 8;
+	status = pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
+
+    tfd = evl_attach_self("app-main-thread:%d", getpid());
+    if (tfd < 0) {
+        printf("Error %d: attaching this thread\n", tfd);
+        exit(EXIT_FAILURE);
+    }
 
     if (!fcm_buffer) {
         printf("Error allocating memory\n");
@@ -28,9 +48,13 @@ int main (int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
+    if (motor_initialization(fcm_fd, 3, 20, 2, 1, FL_MOTOR_GPIO)) {
+        printf("Error initializing motor\n");
+    }
+
     //Set initial configs of the mpu
     
-    mpu_write(fcm_fd, PWR_MGMT_1, PM_1_RESET);//reset mpu, need delay 100ms
+    /*mpu_write(fcm_fd, PWR_MGMT_1, PM_1_RESET);//reset mpu, need delay 100ms
     usleep(200000);
     mpu_write(fcm_fd, PWR_MGMT_1, 0x01);//wake up and select clock source (1 autoselect best)
     mpu_write(fcm_fd, INT_ENABLE, 0x00);//disable interrupt
@@ -39,11 +63,8 @@ int main (int argc, char *argv[]) {
     mpu_write(fcm_fd, INT_PIN_CFG, 0x00);//bypass to direct access to auxiliary i2c
     mpu_write(fcm_fd, CONFIG, 0x00);
     mpu_write(fcm_fd, ACCEL_CONFIG, ACCEL_CONFIG_SET);//full scale
-    mpu_write(fcm_fd, GYRO_CONFIG, GYRO_CONFIG_SET);//full scale
+    mpu_write(fcm_fd, GYRO_CONFIG, GYRO_CONFIG_SET);//full scale*/
 
-    if (motor_initialization(fcm_fd, 3, 20, 2, 1, FL_MOTOR_GPIO)) {
-        printf("Error initializing motor\n");
-    }
 
     /*for (int j = 0; j < 1000000; j++) {
 
