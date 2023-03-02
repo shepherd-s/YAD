@@ -14,43 +14,86 @@
 #include <evl/evl.h>
 #include <evl/sys.h>
 
-#include "command.h"
 #include "common/common.h"
+#include "command.h"
+#include "server_thread.h"
+
+extern pthread_mutex_t command_mutex;
+extern char command[XBUFFER_SIZE];
+
+/**
+* @brief Takes a string in the specific commands format in ASCII or UTF-8
+*           and extract the percentage as an integer
+*
+* @param data A character pointer containing the encoded string
+*/
 
 int main (int argc, char *argv[]) {
-    int read_n;
     int fcm_fd;
-    int tfd;
-    int status;
+    int evl_tfd;
+    int server_thr_id;
+    char buf[XBUFFER_SIZE] = {0};
+    int timeout = 0;
     const char *fcm_path = "/dev/fcm";
-    char *fcm_buffer = malloc(UBUFFER_SIZE);
-    int select = 1;
 
+    pthread_t server_thr;
     struct sched_param param;
-
-	param.sched_priority = 8;
-	status = pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
-
-    tfd = evl_attach_self("app-main-thread:%d", getpid());
-    if (tfd < 0) {
-        printf("Error %d: attaching this thread\n", tfd);
-        exit(EXIT_FAILURE);
-    }
-
-    if (!fcm_buffer) {
-        printf("Error allocating memory\n");
-        exit(EXIT_FAILURE);
-    }
-
+    
+    //Open the fcm driver file
     fcm_fd = open(fcm_path, O_RDWR);
     if (fcm_fd < 0) {
         printf("Error opening fcm file\n");
-        exit(EXIT_FAILURE);
+        exit(fcm_fd);
     }
 
-    if (motor_initialization(fcm_fd, 3, 20, 2, 1, FL_MOTOR_GPIO)) {
-        printf("Error initializing motor\n");
+    //Trigger initialization secuence on motors and wait 6 seconds to finish
+    motor_initialization(fcm_fd, 3, 20, 2, 1, ALL_MOTOR_GPIO);
+    sleep(6);
+
+    //Initialize the UDP server socket to listen commands
+    server_thr_id = pthread_create(&server_thr, NULL, server_init_fnptr, NULL);
+    if (server_thr_id) {
+        printf("Error creating server thread\n");
+        exit(server_thr_id);
     }
+
+    //Set priority on this thread 
+	param.sched_priority = 90;
+	pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
+
+    //Make the current thread an evl one (Real Time)
+    evl_tfd = evl_attach_self("fcm-main-thread:%d", getpid());
+    if (evl_tfd < 0) {
+        printf("Error %d: attaching this thread\n", evl_tfd);
+        exit(evl_tfd);
+    }
+
+    pthread_mutex_lock(&command_mutex);
+    command[0] = 'T';
+    pthread_mutex_unlock(&command_mutex);
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////OOB-STAGE
+    while (1) {
+        pthread_mutex_lock(&command_mutex);
+        copy_to((char*) &command, (char*) &buf, XBUFFER_SIZE);
+        pthread_mutex_unlock(&command_mutex);
+
+        if (command[0] != 'T') {
+            oob_motor_control(fcm_fd, (unsigned long*) &buf);
+            command[0] = 'T';
+            timeout = 0;
+        }
+        else {
+            timeout++;
+            if (timeout > 1000) {
+                buf[1] = '1';
+                oob_motor_control(fcm_fd, (unsigned long*) &buf);
+            }
+        }
+       
+        evl_usleep(3000);
+    }
+    ////////////////////////////////////////////////////////////////////////////////////////////////////END-OOB-STAGE
 
     //Set initial configs of the mpu
     
@@ -65,42 +108,6 @@ int main (int argc, char *argv[]) {
     mpu_write(fcm_fd, ACCEL_CONFIG, ACCEL_CONFIG_SET);//full scale
     mpu_write(fcm_fd, GYRO_CONFIG, GYRO_CONFIG_SET);//full scale*/
 
-
-    /*for (int j = 0; j < 1000000; j++) {
-
-    
-    if (!read(fcm_fd, fcm_buffer, UBUFFER_SIZE)) {
-        printf("Error reading fcm file\n");
-    }
-    for (int i = 0; i < 5; i+=2) {
-        short measure = fcm_buffer[i] << 8 | fcm_buffer[i+1];
-        printf("bytes %d%d -> %d\n",i, i + 1, measure/ACCEL16_NORM);
-    }
-    sleep(1);
-    }
-    float t = 18000;
-    float dt = 1000;
-    float speed = 1;
-    int count = 250;
-
-    while (count) {
-        gpio_write(fcm_fd, GPIO_6, OUT, HIGH);
-        usleep(1000 + speed * dt);
-        gpio_write(fcm_fd, GPIO_6, OUT, LOW);
-        usleep(1000 - speed * dt + t);
-        count--;
-    }
-
-    count = 250;
-    while (count) {
-        gpio_write(fcm_fd, GPIO_6, OUT, HIGH);
-        usleep(1000 + 0 * dt);
-        gpio_write(fcm_fd, GPIO_6, OUT, LOW);
-        usleep(1000 - 0 * dt + t);
-        count--;
-    }*/
-
     close(fcm_fd);
-    free (fcm_buffer);
     exit(EXIT_SUCCESS);
 }

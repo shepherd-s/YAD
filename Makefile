@@ -1,21 +1,15 @@
-#Se silencian los comandos con @
-#%.o cualquier archivo que termine en .o ej regla carpeta1/%.o:carpeta1/%.c el objetivo se llamara igual
-#$? pasa todos los requisitos, $< pasa los .c $@ pasa los .o
-#\ para dividir lineas en variables por ejemplo
-#entra en fcm y ejecuta su make para crear e insertar el módulo flight_control.ko
-#después ejecuta make en el directorio principal
-
-#*******USAGE********
-# make clean to eliminate binaries and unmount module flight_control.ko
-# make to build, if fails, do make clean
-CFLAGS += -Wa,-mthumb -levl
+CFLAGS += -Wa,-mthumb -levl -lpthread -std=gnu11 -O3 -funroll-loops
 PWD := $(shell pwd)
 
 all: main
 	make -C $(PWD)/fcm
-	./main
+#	./main
 
-main: main.c command.h command.c
+main: main.c command.h command.c server_thread.h server_thread.c
+
+test: test.c
+	gcc test.c
+	./a.out
 
 .PHONY: clean
 clean:

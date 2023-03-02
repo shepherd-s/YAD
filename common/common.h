@@ -1,13 +1,15 @@
 #define BUS_NUM 0
-#define UBUFFER_SIZE 256
+#define XBUFFER_SIZE 512
 #define ACCEL16_NORM 2048
+#define FORMAT_SIZE 20
 
-///////////////////////////////////////////////////////////////////////////////command flags
+///////////////////////////////////////////////////////////////////////////////ioctl command flags
 #define MPU_CONFIG_FLAG 0x00
-#define ESC_CONTROL_FLAG 0x01
+#define MOTOR_CONFIG_FLAG _IOW('a', 'b', unsigned long *)
+#define MOTOR_CONTROL_FLAG _IOW('c', 'd', unsigned long *)
+#define MOTOR_CALIBRATION_FLAG _IOW('e', 'f', unsigned long *)
 #define GPIO_CONFIG_FLAG 0x02
-#define MOTOR_CONFIG_FLAG 0x03
-#define MOTOR_RUN_FLAG 0x04
+#define XBUF_FD 0x05
 
 ///////////////////////////////////////////////////////////////////////////////word values for MPU9250
 #define UC_DATA_RESET 0x41
@@ -57,13 +59,26 @@
 #define FR_MOTOR_GPIO (uint8_t) 110 //motor front right
 #define RL_MOTOR_GPIO (uint8_t) 20 //motor rear left
 #define RR_MOTOR_GPIO (uint8_t) 200 //motor rear right
-#define HIGH 0x01
-#define LOW 0x00
+#define HIGH 0x02
+#define LOW 0x03
+#define ALL_MOTOR_GPIO 0
 
 //////////////////////////////////////////////////////////////////////////////motor control
 #define ARM_SEQUENCE 0x00
-#define FORWARD 0x01
-#define REVERSE 0x02
-#define VERTICAL 0x03
-#define LEFT 0x04
-#define RIGHT 0x05
+#define VERTICAL 0x56               //V
+#define HORIZONTAL 0x48             //H
+#define CHILL 0X43                  //C
+#define YAWR 0x59                   //Y
+#define YAWL 0x79                   //y
+#define CFORWARD 0x66               //f
+#define CBACKWARD 0x62              //b
+#define CRIGHT 0x72                 //r
+#define CLEFT 0x6C                  //l
+#define CYAWR 0x5A                  //Z
+#define CYAWL 0x7A                  //z
+#define MAX_TURNING_THRESHOLD 10
+#define MAX_VELOCITY 100
+#define MIN_VELOCITY 0
+#define MAX_CORRECTION 10
+#define CHILL_VELOCITY 20 //TODO: Test wich one is suitable for the drone
+
