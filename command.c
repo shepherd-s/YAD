@@ -56,7 +56,7 @@ int motor_initialization(int fd,
 
     ret = ioctl(fd, MOTOR_CONFIG_FLAG, &buf);
     if (ret < 0) {
-        evl_printf("Error ioctl-writing to fcm file\n");
+        evl_printf("Error ioctl: Writing to fcm file\n");
         return ret;
     }
     
@@ -68,8 +68,20 @@ int oob_motor_control(int fd, unsigned long *command)
     int ret = 0;
 
     if (oob_ioctl(fd, MOTOR_CONTROL_FLAG, command)) {
-        printf("Error writing to fcm file\n");
+        printf("Error oob-ioctl: Writing to fcm file in motor control\n");
         ret = -2;
+    }
+
+    return ret;
+}
+
+int oob_motor_cal(int fd, unsigned long *command)
+{
+    int ret = 0;
+
+    if (oob_ioctl(fd, MOTOR_CALIBRATION_FLAG, command)) {
+        printf("Error oob-ioctl: Writing to fcm file in motor calibration\n");
+        ret -3;
     }
 
     return ret;

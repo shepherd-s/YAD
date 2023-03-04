@@ -10,25 +10,29 @@
 #include "../common/common.h"
 #include "motor_thread.h"
 
-volatile unsigned long mct;
-volatile unsigned long maxd;
-volatile unsigned long mind;
-volatile unsigned long norm;
-volatile unsigned long base_velocity;
+unsigned long mct;
+unsigned long maxd;
+unsigned long mind;
+unsigned long norm;
+unsigned long base_velocity;
 
-volatile struct motor_desc fl_motor;
-volatile struct motor_desc fr_motor;
-volatile struct motor_desc rl_motor;
-volatile struct motor_desc rr_motor;
 
-int buf_free = 1;
+struct motor_desc fl_motor;
+struct motor_desc fr_motor;
+struct motor_desc rl_motor;
+struct motor_desc rr_motor;
+
+struct mutex motors_mutex;
+struct evl_kmutex evl_motors_mutex;
+
 int t_round = 0;
+int buf_free = 1;
 
 //function pointer for evl_kthreads running the motors
 void evl_init_motor_fnptr(void *evl_args)
 {
     unsigned long *chargs;
-    volatile struct motor_desc *motor;
+    struct motor_desc *motor;
 
     chargs = (unsigned long*) evl_args;
 
@@ -56,8 +60,10 @@ void evl_init_motor_fnptr(void *evl_args)
                 motor);
 }
 
-void set_velocity(unsigned long vel, volatile struct motor_desc *motor)
+void set_velocity(unsigned long vel, struct motor_desc *motor)
 {
+    unsigned long up_period = 0;
+
     if (vel <= MAX_VELOCITY) {
         unsigned long v = vel + motor->vel_correction;
         if (v > MAX_VELOCITY && motor->vel_correction < 0)
@@ -65,24 +71,30 @@ void set_velocity(unsigned long vel, volatile struct motor_desc *motor)
         if (v > MAX_VELOCITY && motor->vel_correction > 0)
             v = MAX_VELOCITY;
         motor->velocity = v;
-        motor->s_period = ktime_set(0, v * norm + mind);
-        motor->l_period = ktime_set(0, mct - (v * norm + mind));
+        up_period = v * norm + mind;
+        motor->s_period = ktime_set(0, up_period);
+        motor->l_period = ktime_set(0, mct - up_period);
     }
 }
 
 void set_base_velocity(unsigned long vel)
 {
     unsigned long v = vel;
-    if (vel > 100) {
-        v = 100;
+    if (vel > MAX_VELOCITY) {
+        v = MAX_VELOCITY;
     }
     base_velocity = v;
 }
 
-void acc_vel_correction(long correction, volatile struct motor_desc *motor)
+void acc_vel_correction(long correction, struct motor_desc *motor)
 {
-    if (motor->vel_correction >= -MAX_CORRECTION && motor->vel_correction <= MAX_CORRECTION)
-        motor->vel_correction += correction;
+    motor->vel_correction += correction;
+
+    if (motor->vel_correction > MAX_CORRECTION && correction < 0) //unsigned value out of range
+        motor->vel_correction = 0;
+
+    if (motor->vel_correction > MAX_CORRECTION && correction >= 0)
+        motor->vel_correction = MAX_CORRECTION;
 }
 
 void move(char chill_byte, unsigned long percent_vert, char sign_x, unsigned long percent_x, 
@@ -92,9 +104,12 @@ void move(char chill_byte, unsigned long percent_vert, char sign_x, unsigned lon
     unsigned long substracting_x;
     unsigned long adding_y;
     unsigned long substracting_y;
+    unsigned long adding_yw;
+    unsigned long substracting_yw;
     unsigned long chill = base_velocity;
     unsigned long perx = percent_x;
     unsigned long pery = percent_y;
+    unsigned long peryw = percent_yaw;
     unsigned long add_limit = MAX_TURNING_THRESHOLD / 2 + MAX_TURNING_THRESHOLD % 2;
     unsigned long substract_limit = MAX_TURNING_THRESHOLD / 2;
 
@@ -110,15 +125,23 @@ void move(char chill_byte, unsigned long percent_vert, char sign_x, unsigned lon
         perx = MAX_TURNING_THRESHOLD;
     if (pery > MAX_TURNING_THRESHOLD)
         pery = MAX_TURNING_THRESHOLD;
+    if (peryw > MAX_TURNING_THRESHOLD)
+        peryw = MAX_TURNING_THRESHOLD;
 
     adding_x = perx / 2 + (perx % 2);
     adding_x = (adding_x > add_limit) ? add_limit : adding_x;
     substracting_x = perx / 2;
     substracting_x = (substracting_x > substract_limit) ? substract_limit : substracting_x;
+
     adding_y = pery / 2 + (pery % 2);
     adding_y = (adding_y > add_limit) ? add_limit : adding_y;
     substracting_y = pery / 2;
     substracting_y = (substracting_y > substract_limit) ? substract_limit : substracting_y;
+
+    adding_yw = peryw / 2 + (peryw % 2);
+    adding_yw = (adding_yw > add_limit) ? add_limit : adding_yw;
+    substracting_yw = peryw / 2;
+    substracting_yw = (substracting_yw > substract_limit) ? substract_limit : substracting_yw;
 
     if (sign_x == '+') {
         fl_vel += adding_x;
@@ -146,6 +169,19 @@ void move(char chill_byte, unsigned long percent_vert, char sign_x, unsigned lon
         rr_vel += adding_y;
     }
 
+    if (sign_yaw == '+') {
+        fl_vel -= substracting_yw;
+        rl_vel += adding_yw;
+        fr_vel += adding_yw;
+        rr_vel -= substracting_yw;
+    }
+    else {
+        fl_vel += adding_yw;
+        rl_vel -= substracting_yw;
+        fr_vel -= substracting_yw;
+        rr_vel += adding_yw;
+    }
+
     if (chill_byte != '1') {
         //TODO make cumulative velocity not exceed of max_threshold / 2 + 1
         //Execute vertical movement order
@@ -155,22 +191,11 @@ void move(char chill_byte, unsigned long percent_vert, char sign_x, unsigned lon
         set_velocity(percent_vert, &rl_motor);
         set_velocity(percent_vert, &fr_motor);
 
-        //Execute turning order 
+        //Execute turning and yaw order
         set_velocity(fl_vel, &fl_motor);
         set_velocity(rr_vel, &rr_motor);
         set_velocity(fr_vel, &fr_motor);
         set_velocity(rl_vel, &rl_motor);
-
-        //Execute Yaw order
-        //TODO
-        /*set_velocity(adding, &rr_motor);
-        set_velocity(substracting, &fl_motor);
-        set_velocity(adding, &rl_motor);
-        set_velocity(substracting, &rr_motor);*/
-        /*set_velocity(adding, &rl_motor);
-        set_velocity(substracting, &fr_motor);
-        set_velocity(adding, &rr_motor);
-        set_velocity(substracting, &rl_motor);*/    
     }
     else {
         set_base_velocity(chill);
@@ -184,6 +209,19 @@ void move(char chill_byte, unsigned long percent_vert, char sign_x, unsigned lon
 void calibrate(char direction)
 {
     switch (direction) {
+        case CFORWARD:
+            if (t_round) {
+                acc_vel_correction(-1, &fl_motor);
+                acc_vel_correction(-1, &fr_motor);
+                t_round = 0;
+            }
+            else {
+                acc_vel_correction(1, &rr_motor);
+                acc_vel_correction(1, &rl_motor);
+                t_round = 1;
+            }
+            break;
+
         case CBACKWARD:
             if (t_round) {
                 acc_vel_correction(-1, &rl_motor);
@@ -249,6 +287,13 @@ void calibrate(char direction)
             }
             break;
 
+        case CZERO:
+            fl_motor.vel_correction = 0;
+            fr_motor.vel_correction = 0;
+            rl_motor.vel_correction = 0;
+            rr_motor.vel_correction = 0;
+            break;
+
         default:
             break;
     }
@@ -258,7 +303,7 @@ void calibrate(char direction)
 * @brief This procedure controls the motors assuming the are attached
 * to an esc by simulating pwm on a gpio pin. 
 */
-void run_motor(volatile struct motor_desc *motor)
+void run_motor(struct motor_desc *motor)
 {
     while (!evl_kthread_should_stop()) {
         gpiod_set_value(motor->gpio, 1);
@@ -290,7 +335,7 @@ void run_motor(volatile struct motor_desc *motor)
 *            0ms->| |__________________|   Shape of the wave at min velocity with usual values.
 */
 void init_motor(unsigned long sec_seconds, unsigned long max_cycle_time,
-                unsigned long max_duty, unsigned long min_duty, volatile struct motor_desc *motor)
+                unsigned long max_duty, unsigned long min_duty, struct motor_desc *motor)
 {
     time64_t init_time = 0;
     time64_t sec_count = 0;

@@ -74,8 +74,9 @@
 #define CBACKWARD 0x62              //b
 #define CRIGHT 0x72                 //r
 #define CLEFT 0x6C                  //l
-#define CYAWR 0x5A                  //Z
-#define CYAWL 0x7A                  //z
+#define CYAWR 0x57                  //W
+#define CYAWL 0x77                  //w
+#define CZERO 0x7A                  //z
 #define MAX_TURNING_THRESHOLD 10
 #define MAX_VELOCITY 100
 #define MIN_VELOCITY 0

@@ -8,4 +8,6 @@ int motor_initialization(int fd, unsigned long seconds, unsigned long max_cycle_
 
 int oob_motor_control(int fd, unsigned long *command);
 
+int oob_motor_cal(int fd, unsigned long *command);
+
 uint16_t mpu_read(int fd, char address);

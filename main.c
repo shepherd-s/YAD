@@ -31,8 +31,7 @@ extern char command[XBUFFER_SIZE];
 int main (int argc, char *argv[]) {
     int fcm_fd;
     int evl_tfd;
-    int server_thr_id;
-    char buf[XBUFFER_SIZE] = {0};
+    int server_thr_id;    
     int timeout = 0;
     const char *fcm_path = "/dev/fcm";
 
@@ -75,22 +74,29 @@ int main (int argc, char *argv[]) {
     ////////////////////////////////////////////////////////////////////////////////////////////////////OOB-STAGE
     while (1) {
         pthread_mutex_lock(&command_mutex);
-        copy_to((char*) &command, (char*) &buf, XBUFFER_SIZE);
-        pthread_mutex_unlock(&command_mutex);
 
         if (command[0] != 'T') {
-            oob_motor_control(fcm_fd, (unsigned long*) &buf);
+            if (command[0] == 'C') {
+                printf("cal--> %s\n", &command);
+                oob_motor_cal(fcm_fd, (unsigned long*) &command);
+            }
+            else if (command[0] == 'V') {
+                printf("move--> %s\n", &command);
+                oob_motor_control(fcm_fd, (unsigned long*) &command);
+            }
             command[0] = 'T';
             timeout = 0;
         }
-        else {
-            timeout++;
+        else {         
             if (timeout > 1000) {
-                buf[1] = '1';
-                oob_motor_control(fcm_fd, (unsigned long*) &buf);
+                timeout = 1001;
+                command[1] = '1';
+                printf("timeout\n");
+                oob_motor_control(fcm_fd, (unsigned long*) &command);
             }
+            timeout++;
         }
-       
+        pthread_mutex_unlock(&command_mutex);
         evl_usleep(3000);
     }
     ////////////////////////////////////////////////////////////////////////////////////////////////////END-OOB-STAGE

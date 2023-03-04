@@ -57,6 +57,6 @@ void *server_init_fnptr(void *args)
         pthread_mutex_lock(&command_mutex);
         copy_to((char*) &buf, (char*) &command, XBUFFER_SIZE);
         pthread_mutex_unlock(&command_mutex);
-        usleep(3000);
+        usleep(2000);
     }
 }

@@ -2,13 +2,12 @@
 * Copyright (C) 2023 Shepherd.
 */
 
+//Kernel
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/spi/spi.h>
-#include <linux/gpio.h>
-#include <linux/gpio/consumer.h>
 #include <linux/slab.h>
 #include <linux/ioctl.h>
 #include <linux/kthread.h>
@@ -16,17 +15,20 @@
 #include <linux/kdev_t.h>
 #include <linux/cdev.h>
 #include <linux/device.h>
-#include <linux/delay.h>
 #include <linux/err.h>
 #include <uapi/linux/gpio.h>
 
+//Dovetail
 #include <linux/dovetail.h>
+
+//Xenomai4-evl
 #include <uapi/evl/devices/gpio.h>
 #include <evl/file.h>
 #include <evl/flag.h>
 #include <evl/sched.h>
 #include <evl/thread.h>
 
+//Project
 #include "../common/common.h"
 #include "motor_thread.h"
 
@@ -41,6 +43,9 @@ unsigned long *cmd_args;
 
 //static struct spi_controller *mpu9250_spi_controller;
 //static struct spi_device *mpu9250_spi_device;
+
+extern struct mutex motors_mutex;
+extern struct evl_kmutex evl_motors_mutex;
 
 static struct evl_kthread *fl_motor_kthread;
 static struct evl_kthread *fr_motor_kthread;
@@ -95,6 +100,20 @@ int decode_movement_data(char *datain, unsigned long *dataout)
 end:
     return ret;
 }
+
+int decode_cal_data(char *datain, char *dataout)
+{
+    int ret = 0;
+
+    dataout[0] = datain[1];
+
+    if ((char) dataout[0] != 'f' && (char) dataout[0] != 'b' &&
+        (char) dataout[0] != 'r' && (char) dataout[0] != 'l' &&
+        (char) dataout[0] != 'W' && (char) dataout[0] != 'w' && (char) dataout[0] != 'z')
+        return -1;
+    
+    return ret;
+}
 ///////////////////////////////////////////////////////////////////////////////////////////////////End-Helpers
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////FOPS
@@ -131,6 +150,9 @@ static long fcm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
                 return -EFAULT;
             }
 
+            //Exclusive access to set motors initialization data
+            mutex_lock(&motors_mutex);
+
             //If there are motor kthreads running, they should stop now to avoid
             //conflicts with subsecuent evl_run_kthread calls
             if (fl_motor_kthread->status) {
@@ -147,13 +169,20 @@ static long fcm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
             }
 
             if (cmd_args[4] == ALL_MOTOR_GPIO) {
+
+                //Plain boolean mutex with spinlock to make motors initialization
+                //secuential and safe
                 while (!buf_free) {}
                 buf_free = 0;
+                /////////////////////////////////////////////////////////////////
+
                 cmd_args[4] = FL_MOTOR_GPIO;
                 ret = evl_run_kthread_on_cpu(fl_motor_kthread, 0, evl_init_motor_fnptr,
                                         cmd_args, 95, EVL_CLONE_PUBLIC, "kt-fl-motor");
-                if (ret)
+                if (ret) {
+                    mutex_unlock(&motors_mutex);
                     return -ESRCH;
+                }
                 fl_motor_kthread->status = 1;
 
                 while (!buf_free) {}
@@ -161,8 +190,10 @@ static long fcm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
                 cmd_args[4] = FR_MOTOR_GPIO;
                 ret = evl_run_kthread_on_cpu(fr_motor_kthread, 1, evl_init_motor_fnptr,
                                         cmd_args, 95, EVL_CLONE_PUBLIC, "kt-fr-motor");
-                if (ret)
+                if (ret) {
+                    mutex_unlock(&motors_mutex);
                     return -ESRCH;
+                }
                 fr_motor_kthread->status = 1;
 
                 while (!buf_free) {}
@@ -170,8 +201,10 @@ static long fcm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
                 cmd_args[4] = RL_MOTOR_GPIO;
                 ret = evl_run_kthread_on_cpu(rl_motor_kthread, 2, evl_init_motor_fnptr,
                                         cmd_args, 95, EVL_CLONE_PUBLIC, "kt-rl-motor");
-                if (ret)
+                if (ret) {
+                    mutex_unlock(&motors_mutex);
                     return -ESRCH;
+                }
                 rl_motor_kthread->status = 1;
 
                 while (!buf_free) {}
@@ -179,11 +212,15 @@ static long fcm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
                 cmd_args[4] = RR_MOTOR_GPIO;
                 ret = evl_run_kthread_on_cpu(rr_motor_kthread, 3, evl_init_motor_fnptr,
                                         cmd_args, 95, EVL_CLONE_PUBLIC, "kt-rr-motor");
-                if (ret)
+                if (ret) {
+                    mutex_unlock(&motors_mutex);
                     return -ESRCH;
+                }
                 rr_motor_kthread->status = 1;
             }
            
+            //Release the excclusive access
+            mutex_unlock(&motors_mutex);
             break;
 
         default:
@@ -230,6 +267,7 @@ static ssize_t fcm_write(struct file *filp, const char __user *user_buffer, size
 static long oob_fcm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
     int ret = 0;
+    char cal_char = 'z';
 
     switch (cmd) {
         case MOTOR_CONTROL_FLAG:
@@ -239,12 +277,15 @@ static long oob_fcm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
             }
 
             if (decode_movement_data((char*) cmd_args, data)) {
-                printk("fcm: Error in oob_ioctl decode\n");
+                printk("fcm: Error in oob_ioctl decode movement data\n");
                 return -EFAULT;
             }
             
+            //Evl exclusive access to motors data
+            evl_lock_kmutex(&evl_motors_mutex);
             move((char) data[1], data[2], (char) data[3], data[4],
                     (char) data[5],  data[6], (char) data[7], data[8]);
+            evl_unlock_kmutex(&evl_motors_mutex);
             
             break;
 
@@ -254,7 +295,15 @@ static long oob_fcm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                 return -EFAULT;
             }
 
-            calibrate(cmd_args[0]);
+            if (decode_cal_data((char*) cmd_args, (char*) &cal_char)) {
+                printk("fcm: Error in oob_ioctl decode calibration data\n");
+                return -EFAULT;
+            }
+
+            //Evl exclusive access to motors data
+            evl_lock_kmutex(&evl_motors_mutex);
+            calibrate(cal_char);
+            evl_unlock_kmutex(&evl_motors_mutex);
             break;
 
         default:
@@ -361,6 +410,10 @@ static int __init fcm_init(void)
         goto r_device;
     }
 
+    //Initialize motors mutex and evl motors mutex
+    mutex_init(&motors_mutex);
+    evl_init_kmutex(&evl_motors_mutex);
+
     //Memory allocation and resource request/////////////////////////////////////////////////////////////////////
     fl_motor_kthread = kzalloc(sizeof (*fl_motor_kthread), GFP_KERNEL);
     fr_motor_kthread = kzalloc(sizeof (*fr_motor_kthread), GFP_KERNEL);
@@ -436,6 +489,9 @@ static void __exit fcm_exit(void)
     if (rr_motor_kthread->status) {
         evl_stop_kthread(rr_motor_kthread);
     }
+
+    //Destroy evl motors mutex (not needed for the kernel mutex)
+    evl_destroy_kmutex(&evl_motors_mutex);
 
     //free gpios
     gpiod_put(fl_motor.gpio);
