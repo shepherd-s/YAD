@@ -1,3 +1,9 @@
+/**
+* SPDX-License-Identifier: GPL-2.0
+*
+* Copyright (C) 2023 Shepherd <shepherdsoft@outlook.com>.
+*/
+
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -20,13 +26,6 @@
 
 extern pthread_mutex_t command_mutex;
 extern char command[XBUFFER_SIZE];
-
-/**
-* @brief Takes a string in the specific commands format in ASCII or UTF-8
-*           and extract the percentage as an integer
-*
-* @param data A character pointer containing the encoded string
-*/
 
 int main (int argc, char *argv[]) {
     int fcm_fd;
@@ -56,9 +55,10 @@ int main (int argc, char *argv[]) {
         exit(server_thr_id);
     }
 
-    //Set priority on this thread 
+    //Set priority on this thread and server's one
 	param.sched_priority = 90;
 	pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
+    pthread_setschedparam((pthread_t) &server_thr, SCHED_FIFO, &param);
 
     //Make the current thread an evl one (Real Time)
     evl_tfd = evl_attach_self("fcm-main-thread:%d", getpid());
@@ -71,17 +71,17 @@ int main (int argc, char *argv[]) {
     command[0] = 'T';
     pthread_mutex_unlock(&command_mutex);
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////OOB-STAGE
+    //////////////////////////////////////////////////////////////////OOB-STAGE
+    oob_ioctl(fcm_fd, MOTOR_KMUTEX_FLAG, NULL);
+
     while (1) {
         pthread_mutex_lock(&command_mutex);
 
         if (command[0] != 'T') {
             if (command[0] == 'C') {
-                printf("cal--> %s\n", &command);
                 oob_motor_cal(fcm_fd, (unsigned long*) &command);
             }
             else if (command[0] == 'V') {
-                printf("move--> %s\n", &command);
                 oob_motor_control(fcm_fd, (unsigned long*) &command);
             }
             command[0] = 'T';
@@ -91,7 +91,6 @@ int main (int argc, char *argv[]) {
             if (timeout > 1000) {
                 timeout = 1001;
                 command[1] = '1';
-                printf("timeout\n");
                 oob_motor_control(fcm_fd, (unsigned long*) &command);
             }
             timeout++;
@@ -99,20 +98,7 @@ int main (int argc, char *argv[]) {
         pthread_mutex_unlock(&command_mutex);
         evl_usleep(3000);
     }
-    ////////////////////////////////////////////////////////////////////////////////////////////////////END-OOB-STAGE
-
-    //Set initial configs of the mpu
-    
-    /*mpu_write(fcm_fd, PWR_MGMT_1, PM_1_RESET);//reset mpu, need delay 100ms
-    usleep(200000);
-    mpu_write(fcm_fd, PWR_MGMT_1, 0x01);//wake up and select clock source (1 autoselect best)
-    mpu_write(fcm_fd, INT_ENABLE, 0x00);//disable interrupt
-    mpu_write(fcm_fd, ACCEL_CONFIG_2, 0x03);//try 0x03 if don`t work
-    mpu_write(fcm_fd, SMPLRT_DIV, 0x00);//sample rate divider to 0
-    mpu_write(fcm_fd, INT_PIN_CFG, 0x00);//bypass to direct access to auxiliary i2c
-    mpu_write(fcm_fd, CONFIG, 0x00);
-    mpu_write(fcm_fd, ACCEL_CONFIG, ACCEL_CONFIG_SET);//full scale
-    mpu_write(fcm_fd, GYRO_CONFIG, GYRO_CONFIG_SET);//full scale*/
+    //////////////////////////////////////////////////////////////END-OOB-STAGE
 
     close(fcm_fd);
     exit(EXIT_SUCCESS);

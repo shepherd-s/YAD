@@ -1,3 +1,9 @@
+/**
+* SPDX-License-Identifier: GPL-2.0
+*
+* Copyright (C) 2023 Shepherd <shepherdsoft@outlook.com>.
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -63,6 +69,7 @@ int motor_initialization(int fd,
     return ret;
 }
 
+//OOB
 int oob_motor_control(int fd, unsigned long *command)
 {
     int ret = 0;
@@ -75,6 +82,7 @@ int oob_motor_control(int fd, unsigned long *command)
     return ret;
 }
 
+//OOB
 int oob_motor_cal(int fd, unsigned long *command)
 {
     int ret = 0;

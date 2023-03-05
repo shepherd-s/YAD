@@ -1,3 +1,9 @@
+/**
+* SPDX-License-Identifier: GPL-2.0
+*
+* Copyright (C) 2023 Shepherd <shepherdsoft@outlook.com>.
+*/
+
 #include <linux/gpio/consumer.h>
 #include <linux/gpio.h>
 #include <linux/timekeeping.h>
@@ -28,7 +34,7 @@ struct evl_kmutex evl_motors_mutex;
 int t_round = 0;
 int buf_free = 1;
 
-//function pointer for evl_kthreads running the motors
+//Function pointer for evl_kthreads running the motors
 void evl_init_motor_fnptr(void *evl_args)
 {
     unsigned long *chargs;
@@ -58,6 +64,94 @@ void evl_init_motor_fnptr(void *evl_args)
                 chargs[2] * 1000000,
                 chargs[3] * 1000000, 
                 motor);
+}
+
+/**
+* @brief This procedure simulates the esc initialization secuence.
+* 
+* @param sec_seconds The duration in seconds of each secuence. An usual
+* value is 3 seconds.
+*
+* @param max_cycle_time The time in nanoseconds of the total pwm cycle.
+* an usual value is 20000000, 20ms.
+*
+* @param max_duty The maximum duty time in ns, usual value 2000000, 2ms.
+*
+* @param min_duty The minimum duty time in ns, usual value 1000000, 1ms.
+*
+* @nicexp            2ms(mdp)          20ms(mct)
+*                  __|                 |
+*            0ms->|  |_________________|   Shape of the wave at max velocity with usual values.
+*
+* @nicexp           1ms(mdp)           20ms(mct)
+*                  _|                  |
+*            0ms->| |__________________|   Shape of the wave at min velocity with usual values.
+*/
+void init_motor(unsigned long sec_seconds,
+                unsigned long max_cycle_time,
+                unsigned long max_duty, 
+                unsigned long min_duty, 
+                struct motor_desc *motor)
+{
+    time64_t init_time = 0;
+    time64_t sec_count = 0;
+    buf_free = 1;
+
+    mct = max_cycle_time;
+    maxd = max_duty;
+    mind = min_duty;
+ 
+    if (max_duty > max_cycle_time) {
+        maxd = max_cycle_time;
+    }
+    if (min_duty > max_duty) {
+        mind = max_duty;
+    }
+    norm = (maxd - mind) / 100;
+
+    motor->vel_correction = 0;
+
+    init_time = ktime_get_seconds();
+    set_velocity(MAX_VELOCITY, motor);
+    while (sec_count < sec_seconds) {
+        sec_count = ktime_get_seconds() - init_time;
+
+        gpiod_set_value(motor->gpio, 1);
+        evl_sleep(motor->s_period);
+
+        gpiod_set_value(motor->gpio, 0);
+        evl_sleep(motor->l_period);
+    }
+
+    init_time = ktime_get_seconds();
+    sec_count = 0;
+    set_velocity(0, motor);
+    while (sec_count < sec_seconds) {
+        sec_count = ktime_get_seconds() - init_time;
+
+        gpiod_set_value(motor->gpio, 1);
+        evl_sleep(motor->s_period);
+
+        gpiod_set_value(motor->gpio, 0);
+        evl_sleep(motor->l_period);
+    }
+
+    set_velocity(0, motor);
+    run_motor(motor);
+}
+
+/**
+* @brief This procedure controls the motors assuming they are attached
+* to an esc by simulating pwm on a gpio pin. 
+*/
+void run_motor(struct motor_desc *motor)
+{
+    while (!evl_kthread_should_stop()) {
+        gpiod_set_value(motor->gpio, 1);
+        evl_sleep(motor->s_period);
+        gpiod_set_value(motor->gpio, 0);
+        evl_sleep(motor->l_period);
+    }
 }
 
 void set_velocity(unsigned long vel, struct motor_desc *motor)
@@ -90,26 +184,46 @@ void acc_vel_correction(long correction, struct motor_desc *motor)
 {
     motor->vel_correction += correction;
 
-    if (motor->vel_correction > MAX_CORRECTION && correction < 0) //unsigned value out of range
+     //Check unsigned value out of range
+    if (motor->vel_correction > MAX_CORRECTION && correction < 0)
         motor->vel_correction = 0;
 
     if (motor->vel_correction > MAX_CORRECTION && correction >= 0)
         motor->vel_correction = MAX_CORRECTION;
 }
 
-void move(char chill_byte, unsigned long percent_vert, char sign_x, unsigned long percent_x, 
-            char sign_y, unsigned long percent_y, char sign_yaw, unsigned long percent_yaw)
+/**
+* @brief Applies movement data to the motors in 3 axis and if chill_byte
+*        is active, value '1' (char), applies chill velocity to all 4
+*        motors to prevent unwanted movement when the controller disconnecs.
+* 
+* @param chill_byte This is active when the controller cease to send commands.
+* 
+* @param sign_x The sign of the x axis rotation percentaje value.
+*
+* @param percent_x The percentaje of rotation.
+*
+*        The subsecuent parameters are to y and z (yaw) axis.
+*/
+void move(char chill_byte, 
+            unsigned long percent_vert,
+            char sign_x, 
+            unsigned long percent_x, 
+            char sign_y, 
+            unsigned long percent_y, 
+            char sign_yaw, 
+            unsigned long percent_yaw)
 {
-    unsigned long adding_x;
-    unsigned long substracting_x;
-    unsigned long adding_y;
-    unsigned long substracting_y;
-    unsigned long adding_yw;
-    unsigned long substracting_yw;
+    unsigned long adding_x, substracting_x;
+    unsigned long adding_y, substracting_y;
+    unsigned long adding_yw, substracting_yw;
+
     unsigned long chill = base_velocity;
+
     unsigned long perx = percent_x;
     unsigned long pery = percent_y;
     unsigned long peryw = percent_yaw;
+
     unsigned long add_limit = MAX_TURNING_THRESHOLD / 2 + MAX_TURNING_THRESHOLD % 2;
     unsigned long substract_limit = MAX_TURNING_THRESHOLD / 2;
 
@@ -183,7 +297,6 @@ void move(char chill_byte, unsigned long percent_vert, char sign_x, unsigned lon
     }
 
     if (chill_byte != '1') {
-        //TODO make cumulative velocity not exceed of max_threshold / 2 + 1
         //Execute vertical movement order
         set_base_velocity(percent_vert);
         set_velocity(percent_vert, &fl_motor);
@@ -191,13 +304,15 @@ void move(char chill_byte, unsigned long percent_vert, char sign_x, unsigned lon
         set_velocity(percent_vert, &rl_motor);
         set_velocity(percent_vert, &fr_motor);
 
-        //Execute turning and yaw order
+        //Execute turn and yaw movement order
         set_velocity(fl_vel, &fl_motor);
         set_velocity(rr_vel, &rr_motor);
         set_velocity(fr_vel, &fr_motor);
         set_velocity(rl_vel, &rl_motor);
     }
     else {
+        //Set motors to "chill" velocity to prevent unwanted behaviour if
+        //the controller disconnects
         set_base_velocity(chill);
         set_velocity(chill, &fl_motor);
         set_velocity(chill, &fr_motor);
@@ -206,180 +321,99 @@ void move(char chill_byte, unsigned long percent_vert, char sign_x, unsigned lon
     }
 }
 
+/**
+* @brief This is to set permanent velocity correction to the motors for
+*        instability.
+*/
 void calibrate(char direction)
 {
     switch (direction) {
-        case CFORWARD:
-            if (t_round) {
-                acc_vel_correction(-1, &fl_motor);
-                acc_vel_correction(-1, &fr_motor);
-                t_round = 0;
-            }
-            else {
-                acc_vel_correction(1, &rr_motor);
-                acc_vel_correction(1, &rl_motor);
-                t_round = 1;
-            }
-            break;
+    case CFORWARD:
+        if (t_round) {
+            acc_vel_correction(-1, &fl_motor);
+            acc_vel_correction(-1, &fr_motor);
+            t_round = 0;
+        }
+        else {
+            acc_vel_correction(1, &rr_motor);
+            acc_vel_correction(1, &rl_motor);
+            t_round = 1;
+        }
+        break;
 
-        case CBACKWARD:
-            if (t_round) {
-                acc_vel_correction(-1, &rl_motor);
-                acc_vel_correction(-1, &rr_motor);
-                t_round = 0;
-            }
-            else {
-                acc_vel_correction(1, &fr_motor);
-                acc_vel_correction(1, &fl_motor);
-                t_round = 1;
-            }
-            break;
+    case CBACKWARD:
+        if (t_round) {
+            acc_vel_correction(-1, &rl_motor);
+            acc_vel_correction(-1, &rr_motor);
+            t_round = 0;
+        }
+        else {
+            acc_vel_correction(1, &fr_motor);
+            acc_vel_correction(1, &fl_motor);
+            t_round = 1;
+        }
+        break;
 
-        case CRIGHT:
-            if (t_round) {
-                acc_vel_correction(-1, &fr_motor);
-                acc_vel_correction(-1, &rr_motor);
-                t_round = 0;
-            }
-            else {
-                acc_vel_correction(1, &rl_motor);
-                acc_vel_correction(1, &fl_motor);
-                t_round = 1;
-            }
-            break;
+    case CRIGHT:
+        if (t_round) {
+            acc_vel_correction(-1, &fr_motor);
+            acc_vel_correction(-1, &rr_motor);
+            t_round = 0;
+        }
+        else {
+            acc_vel_correction(1, &rl_motor);
+            acc_vel_correction(1, &fl_motor);
+            t_round = 1;
+        }
+        break;
 
-        case CLEFT:
-            if (t_round) {
-                acc_vel_correction(-1, &fl_motor);
-                acc_vel_correction(-1, &rl_motor);
-                t_round = 0;
-            }
-            else {
-                acc_vel_correction(1, &rr_motor);
-                acc_vel_correction(1, &fr_motor);
-                t_round = 1;
-            }
-            break;
+    case CLEFT:
+        if (t_round) {
+            acc_vel_correction(-1, &fl_motor);
+            acc_vel_correction(-1, &rl_motor);
+            t_round = 0;
+        }
+        else {
+            acc_vel_correction(1, &rr_motor);
+            acc_vel_correction(1, &fr_motor);
+            t_round = 1;
+        }
+        break;
 
-        case CYAWR:
-            if (t_round) {
-                acc_vel_correction(-1, &fl_motor);
-                acc_vel_correction(-1, &rr_motor);
-                t_round = 0;
-            }
-            else {
-                acc_vel_correction(1, &fr_motor);
-                acc_vel_correction(1, &rl_motor);
-                t_round = 1;
-            }
-            break;
+    case CYAWR:
+        if (t_round) {
+            acc_vel_correction(-1, &fl_motor);
+            acc_vel_correction(-1, &rr_motor);
+            t_round = 0;
+        }
+        else {
+            acc_vel_correction(1, &fr_motor);
+            acc_vel_correction(1, &rl_motor);
+            t_round = 1;
+        }
+        break;
 
-        case CYAWL:
-            if (t_round) {
-                acc_vel_correction(-1, &fr_motor);
-                acc_vel_correction(-1, &rl_motor);
-                t_round = 0;
-            }
-            else {
-                acc_vel_correction(1, &fl_motor);
-                acc_vel_correction(1, &rr_motor);
-                t_round = 1;
-            }
-            break;
+    case CYAWL:
+        if (t_round) {
+            acc_vel_correction(-1, &fr_motor);
+            acc_vel_correction(-1, &rl_motor);
+            t_round = 0;
+        }
+        else {
+            acc_vel_correction(1, &fl_motor);
+            acc_vel_correction(1, &rr_motor);
+            t_round = 1;
+        }
+        break;
 
-        case CZERO:
-            fl_motor.vel_correction = 0;
-            fr_motor.vel_correction = 0;
-            rl_motor.vel_correction = 0;
-            rr_motor.vel_correction = 0;
-            break;
+    case CZERO:
+        fl_motor.vel_correction = 0;
+        fr_motor.vel_correction = 0;
+        rl_motor.vel_correction = 0;
+        rr_motor.vel_correction = 0;
+        break;
 
-        default:
-            break;
+    default:
+        break;
     }
-}
-
-/**
-* @brief This procedure controls the motors assuming the are attached
-* to an esc by simulating pwm on a gpio pin. 
-*/
-void run_motor(struct motor_desc *motor)
-{
-    while (!evl_kthread_should_stop()) {
-        gpiod_set_value(motor->gpio, 1);
-        evl_sleep(motor->s_period);
-        gpiod_set_value(motor->gpio, 0);
-        evl_sleep(motor->l_period);
-    }
-}
-
-/**
-* @brief This procedure simulates the esc initialization secuence.
-* 
-* @param sec_seconds The duration in seconds of each secuence. An usual
-* value is 3 seconds.
-*
-* @param max_cycle_time The time in nanoseconds of the total pwm cycle.
-* an usual value is 20000000, 20ms.
-*
-* @param max_duty The maximum duty time in ns, usual value 2000000, 2ms.
-*
-* @param min_duty The minimum duty time in ns, usual value 1000000, 1ms.
-*
-* @nice              2ms(mdp)          20ms(mct)
-*                  __|                 |
-*            0ms->|  |_________________|   Shape of the wave at max velocity with usual values.
-*
-* @nice             1ms(mdp)           20ms(mct)
-*                  _|                  |
-*            0ms->| |__________________|   Shape of the wave at min velocity with usual values.
-*/
-void init_motor(unsigned long sec_seconds, unsigned long max_cycle_time,
-                unsigned long max_duty, unsigned long min_duty, struct motor_desc *motor)
-{
-    time64_t init_time = 0;
-    time64_t sec_count = 0;
-    buf_free = 1;
-
-    mct = max_cycle_time;
-    maxd = max_duty;
-    mind = min_duty;
- 
-    if (max_duty > max_cycle_time) {
-        maxd = max_cycle_time;
-    }
-    if (min_duty > max_duty) {
-        mind = max_duty;
-    }
-    norm = (maxd - mind) / 100;
-
-    motor->vel_correction = 0;
-
-    init_time = ktime_get_seconds();
-    set_velocity(MAX_VELOCITY, motor);
-    while (sec_count < sec_seconds) {
-        sec_count = ktime_get_seconds() - init_time;
-
-        gpiod_set_value(motor->gpio, 1);
-        evl_sleep(motor->s_period);
-
-        gpiod_set_value(motor->gpio, 0);
-        evl_sleep(motor->l_period);
-    }
-
-    init_time = ktime_get_seconds();
-    sec_count = 0;
-    set_velocity(0, motor);
-    while (sec_count < sec_seconds) {
-        sec_count = ktime_get_seconds() - init_time;
-
-        gpiod_set_value(motor->gpio, 1);
-        evl_sleep(motor->s_period);
-
-        gpiod_set_value(motor->gpio, 0);
-        evl_sleep(motor->l_period);
-    }
-
-    set_velocity(0, motor);
-    run_motor(motor);
 }

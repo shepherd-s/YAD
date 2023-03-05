@@ -1,3 +1,9 @@
+/**
+* SPDX-License-Identifier: GPL-2.0
+*
+* Copyright (C) 2023 Shepherd <shepherdsoft@outlook.com>.
+*/
+
 #pragma once
 
 #include <linux/mutex.h>
@@ -10,7 +16,8 @@ struct motor_desc {
     ktime_t s_period;
     ktime_t l_period;
     long vel_correction;
-    unsigned long velocity; //current velocity in percentage !!! do not set directly, use set_velocity
+    //current velocity in percentage !!! do not set directly, use set_velocity
+    unsigned long velocity;
 };
 
 extern unsigned long mct;
@@ -37,12 +44,17 @@ void set_base_velocity(unsigned long vel);
 
 void acc_vel_correction(long correction, struct motor_desc *motor);
 
-void move(char chill_byte, unsigned long percent_vert, char sign_x, unsigned long percent_x, 
-            char sign_y, unsigned long percent_y, char sign_yaw, unsigned long percent_yaw);
+void move(char chill_byte, unsigned long percent_vert, 
+            char sign_x, unsigned long percent_x,
+            char sign_y, unsigned long percent_y, 
+            char sign_yaw, unsigned long percent_yaw);
 
 void calibrate(char direction);
 
-void init_motor(unsigned long sec_seconds, unsigned long max_cycle_time,
-                unsigned long max_duty, unsigned long min_duty, struct motor_desc *motor);
+void init_motor(unsigned long sec_seconds, 
+                unsigned long max_cycle_time,
+                unsigned long max_duty, 
+                unsigned long min_duty, 
+                struct motor_desc *motor);
 
 void run_motor(struct motor_desc *motor);

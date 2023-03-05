@@ -3,15 +3,16 @@
 #define ACCEL16_NORM 2048
 #define FORMAT_SIZE 20
 
-///////////////////////////////////////////////////////////////////////////////ioctl command flags
+////////////////////////////////////////////////////////////////////////////////ioctl command flags
 #define MPU_CONFIG_FLAG 0x00
 #define MOTOR_CONFIG_FLAG _IOW('a', 'b', unsigned long *)
 #define MOTOR_CONTROL_FLAG _IOW('c', 'd', unsigned long *)
 #define MOTOR_CALIBRATION_FLAG _IOW('e', 'f', unsigned long *)
+#define MOTOR_KMUTEX_FLAG 0x01
 #define GPIO_CONFIG_FLAG 0x02
 #define XBUF_FD 0x05
 
-///////////////////////////////////////////////////////////////////////////////word values for MPU9250
+////////////////////////////////////////////////////////////////////////////word values for MPU9250
 #define UC_DATA_RESET 0x41
 #define PM_1_RESET 0x80
 #define PM_2_ON 0x00
@@ -21,7 +22,7 @@
 #define ACCEL_CONFIG_SET 0x18
 #define ACCEL_CONFIG_2_SET 0x00
 
-//////////////////////////////////////////////////////////////////////////////adresses for MPU9250
+///////////////////////////////////////////////////////////////////////////////adresses for MPU9250
 #define WHO_AM_I 0x75
 #define SIGNAL_PATH_RESET 0x68
 #define USR_CTRL 0x6A
@@ -52,18 +53,18 @@
 #define MPU_READ 0x80
 #define MPU_WRITE 0x0
 
-//////////////////////////////////////////////////////////////////////////////gpio configs
+///////////////////////////////////////////////////////////////////////////////////////gpio configs
 #define IN 0x00
 #define OUT 0X01
-#define FL_MOTOR_GPIO (uint8_t) 6 //motor front left
-#define FR_MOTOR_GPIO (uint8_t) 110 //motor front right
-#define RL_MOTOR_GPIO (uint8_t) 20 //motor rear left
-#define RR_MOTOR_GPIO (uint8_t) 200 //motor rear right
+#define FL_MOTOR_GPIO 6 //motor front left
+#define FR_MOTOR_GPIO 110 //motor front right
+#define RL_MOTOR_GPIO 20 //motor rear left
+#define RR_MOTOR_GPIO 200 //motor rear right
 #define HIGH 0x02
 #define LOW 0x03
 #define ALL_MOTOR_GPIO 0
 
-//////////////////////////////////////////////////////////////////////////////motor control
+//////////////////////////////////////////////////////////////////////////////////////motor control
 #define ARM_SEQUENCE 0x00
 #define VERTICAL 0x56               //V
 #define HORIZONTAL 0x48             //H

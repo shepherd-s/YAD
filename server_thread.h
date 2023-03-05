@@ -1,3 +1,9 @@
+/**
+* SPDX-License-Identifier: GPL-2.0
+*
+* Copyright (C) 2023 Shepherd <shepherdsoft@outlook.com>.
+*/
+
 #include <pthread.h>
 #include "common/common.h"
 

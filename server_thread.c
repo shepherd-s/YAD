@@ -1,3 +1,9 @@
+/**
+* SPDX-License-Identifier: GPL-2.0
+*
+* Copyright (C) 2023 Shepherd <shepherdsoft@outlook.com>.
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -17,6 +23,12 @@ void copy_to(char *from, char *to, size_t size)
     }
 }
 
+/**
+* @brief Creates an UDP socket in the specified port in the
+*        Internet namespace
+*
+* @param port the port number of the socket
+*/
 int make_server_socket(uint16_t port)
 {
     int sock;
@@ -41,6 +53,9 @@ int make_server_socket(uint16_t port)
     return sock;
 }
 
+/**
+* @brief Function pointer for the server thread
+*/
 void *server_init_fnptr(void *args)
 {
     int sock;
