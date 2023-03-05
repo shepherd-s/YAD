@@ -1,2 +1,2 @@
 # ignores .vscode folder
-.vscode/
+.vscode/*
