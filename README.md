@@ -15,12 +15,10 @@ the phone as a controller.
     - https://source.denx.de/Xenomai
     - https://www.armbian.com
 <br></br>
-
 - Realtek Usb Wi-Fi Dongle
     - Driver: rtl8188fu.ko
     - https://github.com/kelebek333/rtl8188fu.git
 <br></br>
-
 - 4x ESC 30A  
 
 - 4x 2122 900KV Brushless Motor  
@@ -32,7 +30,6 @@ the phone as a controller.
     - Discharge Rate: 40C
     - Number of Cells: 3S
 <br></br>
-
 - Drone Frame
 
 ### USAGE
