@@ -1,6 +1,6 @@
 ## YAD 1.0
 
-This software aims to turn a single board computer into a drone using as little  
+This software aims to turn a Single Board Computer into a drone using as little  
 hardware as possible. To do so, it uses the Xenomai4 real-time co-kernel (EVL)  
 to simulate PWM on the gpio as input for the ESCs of the motors as most SBCs don't  
 provide 4 independent hardware PWM channels. The companion Android app is for using  
@@ -14,11 +14,11 @@ the phone as a controller.
     - SO: armbian (with Xenomai-evl kernel)
     - https://source.denx.de/Xenomai
     - https://www.armbian.com
-<br></br>
+    
 - Realtek Usb Wi-Fi Dongle
     - Driver: rtl8188fu.ko
     - https://github.com/kelebek333/rtl8188fu.git
-<br></br>
+    
 - 4x ESC 30A  
 
 - 4x 2122 900KV Brushless Motor  
@@ -29,7 +29,7 @@ the phone as a controller.
     - Capacity: 2700 mah
     - Discharge Rate: 40C
     - Number of Cells: 3S
-<br></br>
+    
 - Drone Frame
 
 ### USAGE
@@ -51,8 +51,8 @@ connected as follows:
 
 The gpio pin naming is the gpiolib one.  
 Once the kernel module is inserted, it should not be removed until the  
-next reboot for security reasons.  
+next reboot for security reasons.
 
 ### DEMO
 
-https://user-images.githubusercontent.com/90930079/223522540-1b194e26-71b7-492c-b254-a8594489a013.mp4
+https://user-images.githubusercontent.com/90930079/223528166-b8d2f61b-fab9-4cb4-b6c4-dd4db5cb6346.mp4
