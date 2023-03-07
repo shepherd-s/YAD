@@ -183,13 +183,12 @@ void set_base_velocity(unsigned long vel)
 void acc_vel_correction(long correction, struct motor_desc *motor)
 {
     motor->vel_correction += correction;
-
      //Check unsigned value out of range
-    if (motor->vel_correction > MAX_CORRECTION && correction < 0)
-        motor->vel_correction = 0;
-
-    if (motor->vel_correction > MAX_CORRECTION && correction >= 0)
+    if (motor->vel_correction > MAX_CORRECTION)
         motor->vel_correction = MAX_CORRECTION;
+
+    if (motor->vel_correction < -MAX_CORRECTION)
+        motor->vel_correction = -MAX_CORRECTION;
 }
 
 /**

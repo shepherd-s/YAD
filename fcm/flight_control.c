@@ -43,6 +43,7 @@
 
 extern struct evl_kmutex evl_motors_mutex;
 
+int armed = 0;
 dev_t dev = 0;
 static struct class *dev_class;
 static struct cdev fcm_cdev;
@@ -155,6 +156,8 @@ static long fcm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
             return -EFAULT;
         }
 
+        if (armed)
+            goto warn;
         /* If there are motor kthreads running, they should stop now to avoid
          * conflicts with subsecuent evl_run_kthread calls
          */
@@ -217,6 +220,8 @@ static long fcm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
             }
             rr_motor_kthread->status = 1;
         }
+
+        armed = 1;
        
         break;
 
@@ -224,6 +229,11 @@ static long fcm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
         break;
     }
 
+    return ret;
+
+    warn:
+
+    pr_warn("FCM: Motors already armed");
     return ret;
 }
 
