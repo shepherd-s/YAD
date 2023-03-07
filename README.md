@@ -1,5 +1,4 @@
-##
-YAD 1.0
+## YAD 1.0
 
 This software aims to turn a single board computer into a drone using as little  
 hardware as possible. To do so, it uses the Xenomai4 real-time co-kernel (EVL)  
@@ -7,8 +6,7 @@ to simulate PWM on the gpio as input for the ESCs of the motors as most SBCs don
 provide 4 independent hardware PWM channels. The companion Android app is for using  
 the phone as a controller.    
 
-###
-HARDWARE TESTED
+### HARDWARE TESTED
 
 - Orange Pi Pc
     - CPU: Allwinner H3 (arm32)
@@ -37,8 +35,7 @@ HARDWARE TESTED
 
 - Drone Frame
 
-###
-USAGE
+### USAGE
 
 The software consist of of 3 main parts, the fcm (flight control module) kernel  
 module, the user space program (yad) and the android apk.  
@@ -53,13 +50,12 @@ connected as follows:
 - Rear left motor ESC --> gpio pin 20
 - Rear right motor ESC --> gpio pin 200
 
-###
-NOTES
+### NOTES
 
 The gpio pin naming is the gpiolib one.  
 Once the kernel module is inserted, it should not be removed until the  
 next reboot for security reasons.  
 
-###
-DEMO
+### DEMO
 
+https://user-images.githubusercontent.com/90930079/223522540-1b194e26-71b7-492c-b254-a8594489a013.mp4
