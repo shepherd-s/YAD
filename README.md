@@ -34,7 +34,7 @@ the phone as a controller.
 
 ### USAGE
 
-The software consist of of 3 main parts, the fcm (flight control module) kernel  
+The software consist of 3 main parts, the fcm (flight control module) kernel  
 module, the user space program (yad) and the android apk.  
 
 You have to make a Wi-Fi access point in the ip 192.168.0.1 on your SBC and insert  
