@@ -38,7 +38,7 @@ The software consist of 3 main parts, the fcm (flight control module) kernel
 module, the user space program (yad) and the android apk.  
 
 You have to make a Wi-Fi access point in the ip 192.168.0.1 on your SBC and insert  
-the fcm.ko module. Then run the yad userspace application with ./yad command and  
+the fcm.ko module. Then run the yad user space application with ./yad command and  
 launch the apk on the phone, which should be Android 9 or above. The ESCs should be  
 connected as follows:  
 
